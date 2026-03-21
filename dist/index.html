@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glan Pickleball Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Dancing+Script:wght@700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        /* Prevent horizontal scroll without breaking vertical scrolling on mobile */
+        html { overflow-x: clip; }
+
+        :root {
+            --cream: #f5f8e0;
+            --green-dark: #1e5c45;
+            --green-medium: #2d7a5f;
+            --green-light: #e0ede7;
+            --white: #ffffff;
+            --gray: #666;
+            --light-gray: #f0f0f0;
+            --border: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--cream);
+            min-height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ─── Loading Screen ─── */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background-color: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            transition: opacity 0.6s ease;
+        }
+
+        #loading-screen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-logo {
+            text-align: center;
+            animation: logoFadeIn 1.2s ease forwards;
+        }
+
+        .loading-glan {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            color: var(--green-dark);
+            letter-spacing: 0.25em;
+            font-weight: 700;
+        }
+
+        .loading-pickleball {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(3.5rem, 9vw, 7rem);
+            color: var(--green-dark);
+            line-height: 1;
+            display: block;
+        }
+
+        .loading-community {
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(0.7rem, 2vw, 1.1rem);
+            color: var(--green-dark);
+            letter-spacing: 0.55em;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .loading-bar-wrap {
+            width: 180px;
+            height: 3px;
+            background: rgba(30,92,69,0.15);
+            border-radius: 99px;
+            margin: 2rem auto 0;
+            overflow: hidden;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--green-dark);
+            border-radius: 99px;
+            animation: loadBar 2.2s ease forwards 0.3s;
+        }
+
+        @keyframes logoFadeIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes loadBar {
+            from { width: 0%; }
+            to   { width: 100%; }
+        }
+
+        /* ─── App wrapper ─── */
+        #app { display: none; }
+
+        /* ─── Header ─── */
+        .header {
+            background-color: var(--green-dark);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-logo { text-align: center; color: var(--cream); line-height: 1; }
+        .header-logo .h-glan   { font-family: 'Playfair Display', serif; font-size: 1.2rem; letter-spacing: 0.3em; display: block; }
+        .header-logo .h-pickle { font-family: 'Dancing Script', cursive; font-size: 2rem; display: block; }
+        .header-logo .h-comm   { font-size: 0.55rem; letter-spacing: 0.5em; display: block; margin-top: -2px; }
+
+        /* ─── Courts Section ─── */
+        .courts-section {
+            padding: 3rem 2rem 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title    { font-size: 2rem; color: var(--green-dark); font-weight: 700; margin-bottom: 0.25rem; }
+        .section-subtitle { color: var(--gray); margin-bottom: 2.5rem; font-size: 0.95rem; }
+
+        .courts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .court-card {
+            background: var(--white);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .court-card:hover { transform: translateY(-5px); box-shadow: 0 10px 32px rgba(0,0,0,0.13); }
+
+        .court-img-wrap { width: 100%; height: 200px; overflow: hidden; flex-shrink: 0; }
+        .court-img-wrap svg { width: 100%; height: 100%; }
+
+        .court-info {
+            padding: 1.4rem 1.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .court-name { font-size: 1.35rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.3rem; }
+        .court-loc  { color: var(--gray); font-size: 0.82rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 0.3rem; }
+        .court-loc svg { flex-shrink: 0; margin-top: 1px; }
+
+        .court-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+        .court-tags { display: flex; gap: 0.4rem; }
+        .tag {
+            background: var(--green-light);
+            color: var(--green-dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.73rem;
+            font-weight: 600;
+        }
+        .court-price { font-size: 1.25rem; font-weight: 700; color: var(--green-dark); }
+
+        .book-btn {
+            width: 100%;
+            margin-top: auto;
+            padding: 0.85rem;
+            background-color: var(--green-dark);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.06em;
+            transition: background-color 0.18s, transform 0.1s;
+        }
+
+        .book-btn:hover  { background-color: var(--green-medium); }
+        .book-btn:active { transform: scale(0.98); }
+
+        /* ─── Booking Page ─── */
+        #booking-page { display: none; }
+
+        .booking-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 2rem 4rem;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--green-dark);
+            font-size: 0.95rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            margin-bottom: 1.8rem;
+            padding: 0.4rem 0;
+        }
+
+        .back-btn:hover { color: var(--green-medium); }
+
+        .booking-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 3rem;
+        }
+
+        /* Left */
+        .b-court-img { width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 1.4rem; }
+        .b-court-img svg { width: 100%; height: 260px; display: block; }
+
+        .b-court-name { font-size: 1.7rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.5rem; }
+        .b-loc {
+            display: flex; align-items: flex-start; gap: 0.4rem;
+            color: var(--gray); font-size: 0.88rem; margin-bottom: 1.5rem; line-height: 1.5;
+        }
+
+        .b-info-section { border-top: 1px solid var(--border); padding-top: 1.4rem; }
+        .b-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; }
+        .b-info-label { font-size: 1rem; font-weight: 600; color: #1a1a1a; }
+        .b-price { font-size: 1.5rem; font-weight: 700; color: var(--green-dark); }
+
+        /* Right */
+        .b-summary-title { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; margin-bottom: 1.4rem; }
+        .b-section-label { font-size: 1rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.9rem; }
+
+        .calendar-box {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.4rem;
+            margin-bottom: 1.5rem;
+            background: var(--white);
+        }
+
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+        .cal-month-label { font-weight: 600; font-size: 1rem; color: #1a1a1a; }
+        .cal-nav {
+            background: none; border: none; cursor: pointer;
+            color: #888; font-size: 1.3rem; width: 32px; height: 32px;
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+        }
+        .cal-nav:hover { background: var(--light-gray); color: #333; }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+            row-gap: 2px;
+        }
+
+        .cal-dh {
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #aaa;
+            padding: 0.4rem 0 0.6rem;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        /* Wrapper centers the circle inside the grid column */
+        .cal-d-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 0;
+        }
+
+        .cal-d {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.87rem;
+            font-weight: 400;
+            color: #2c2c2c;
+            font-family: 'Montserrat', sans-serif;
+            transition: background 0.13s, color 0.13s;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .cal-d:hover:not(.cal-past):not(.cal-other) {
+            background: var(--green-light);
+            color: var(--green-dark);
+            font-weight: 600;
+        }
+
+        .cal-d.cal-today {
+            background: var(--green-dark);
+            color: #fff !important;
+            font-weight: 700;
+        }
+
+        .cal-d.cal-sel {
+            background: var(--green-dark);
+            color: #fff !important;
+            font-weight: 700;
+        }
+
+        .cal-d.cal-past  { color: #ccc !important; cursor: not-allowed; }
+        .cal-d.cal-other { color: #d5d5d5 !important; cursor: default; font-weight: 400; }
+
+        /* Time slots */
+        .slots-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem;
+            margin-bottom: 1.4rem;
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .slots-grid::-webkit-scrollbar { width: 4px; }
+        .slots-grid::-webkit-scrollbar-track { background: transparent; }
+        .slots-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 99px; }
+
+        .slot {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            position: relative;
+            background: var(--white);
+        }
+
+        .slot:hover:not(.slot-booked) { border-color: var(--green-dark); }
+
+        .slot.slot-sel {
+            border-color: var(--green-dark);
+            background: rgba(30,92,69,0.05);
+        }
+
+        .slot.slot-booked {
+            cursor: not-allowed;
+            background: #fafafa;
+            border-color: #eee;
+        }
+
+        .slot-time  { font-size: 0.9rem; font-weight: 600; color: #1a1a1a; }
+        .slot-price { font-size: 0.8rem; color: #777; margin-top: 2px; }
+        .slot-booked .slot-time  { color: #bbb; }
+        .slot-booked .slot-price { color: #ccc; }
+
+        .slot-status {
+            position: absolute; top: 0.85rem; right: 0.9rem;
+            font-size: 0.9rem; line-height: 1;
+        }
+
+        .slot-booked-lbl { font-size: 0.72rem; color: #bbb; margin-top: 2px; }
+
+        .slot.slot-dim {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        /* Confirm */
+        .confirm-btn {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--green-dark);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.04em;
+            transition: background-color 0.18s;
+        }
+
+        .confirm-btn:hover:not(:disabled) { background-color: var(--green-medium); }
+        .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* ─── Booking summary strip (above confirm btn) ─── */
+        .booking-summary-strip {
+            display: none;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0.9rem;
+            background: var(--white);
+        }
+
+        .bss-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+
+        .bss-row:last-child { border-bottom: none; }
+
+        .bss-label { color: var(--green-dark); font-weight: 500; }
+        .bss-value { color: #1a1a1a; font-weight: 500; text-align: right; }
+
+        .bss-total { font-weight: 700; font-size: 0.95rem; }
+        .bss-total .bss-label { color: #1a1a1a; }
+        .bss-total .bss-value { color: var(--green-dark); font-size: 1rem; }
+
+        /* ─── Overlay ─── */
+        .overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .overlay.show { display: flex; }
+
+        /* ─── Wizard Modal ─── */
+        .modal {
+            background: var(--white);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 520px;
+            overflow: hidden;
+            animation: modalPop 0.22s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+
+        /* Modal header */
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header-title {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 1.1rem; font-weight: 700; color: #1a1a1a;
+        }
+
+        .modal-close {
+            background: none; border: none; cursor: pointer;
+            color: #999; font-size: 1.3rem; line-height: 1;
+            padding: 0.2rem;
+        }
+
+        .modal-close:hover { color: #333; }
+
+        /* Steps bar */
+        .steps-bar {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem 0.5rem;
+            gap: 0;
+        }
+
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .step-item.done:not(:last-child)::after { background: var(--green-dark); }
+
+        .step-circle {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 2px solid #e0e0e0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--white);
+            position: relative; z-index: 1;
+            font-size: 1rem; color: #ccc;
+            transition: all 0.2s;
+        }
+
+        .step-item.active .step-circle {
+            border-color: var(--green-dark);
+            background: var(--green-dark);
+            color: #fff;
+        }
+
+        .step-item.done .step-circle {
+            border-color: var(--green-dark);
+            background: var(--green-dark);
+            color: #fff;
+        }
+
+        .step-label {
+            font-size: 0.68rem; font-weight: 600;
+            color: #bbb; margin-top: 0.3rem;
+            text-align: center; white-space: nowrap;
+        }
+
+        .step-item.active .step-label { color: var(--green-dark); }
+        .step-item.done  .step-label  { color: var(--green-dark); }
+
+        /* Modal body */
+        .modal-body {
+            padding: 1.25rem 1.5rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Summary card inside modal */
+        .m-summary-card {
+            background: #f0f7ff;
+            border: 1px solid #cce0ff;
+            border-radius: 12px;
+            padding: 1.1rem 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .m-summary-title {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 1rem; font-weight: 700; color: var(--green-dark);
+            margin-bottom: 0.9rem;
+        }
+
+        .m-row {
+            display: flex; align-items: flex-start; gap: 0.55rem;
+            font-size: 0.88rem; color: #333; margin-bottom: 0.55rem;
+        }
+
+        .m-row:last-child { margin-bottom: 0; }
+        .m-row-icon { color: var(--green-dark); flex-shrink: 0; margin-top: 1px; }
+        .m-row strong { color: #1a1a1a; }
+
+        .m-total-card {
+            background: #f0faf4;
+            border: 1px solid #b2dfca;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .m-total-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 1rem; font-weight: 700; color: var(--green-dark);
+        }
+
+        .m-total-amount {
+            font-size: 1.6rem; font-weight: 800; color: var(--green-dark);
+        }
+
+        /* Phone step */
+        .phone-field label {
+            display: block; font-size: 0.88rem; font-weight: 600;
+            color: #333; margin-bottom: 0.5rem;
+        }
+
+        .phone-field input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Montserrat', sans-serif;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .phone-field input:focus { border-color: var(--green-dark); }
+        .phone-field .hint { font-size: 0.78rem; color: #aaa; margin-top: 0.4rem; }
+
+        /* Payment step */
+        .pay-options { display: flex; flex-direction: column; gap: 0.65rem; }
+
+        .pay-option {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 0.75rem;
+            transition: border-color 0.15s, background 0.15s;
+            font-size: 0.92rem; font-weight: 600; color: #1a1a1a;
+        }
+
+        .pay-option:hover { border-color: var(--green-dark); background: #f9fdf9; }
+        .pay-option.pay-sel { border-color: var(--green-dark); background: #f0faf4; }
+        .pay-option .pay-icon { font-size: 1.4rem; }
+
+        /* ─── Receipt upload ─── */
+        .receipt-label {
+            display: block; font-size: 0.88rem; font-weight: 600;
+            color: #333; margin-bottom: 0.5rem;
+        }
+
+        .receipt-drop {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 1.2rem;
+            cursor: pointer;
+            text-align: center;
+            transition: border-color 0.15s, background 0.15s;
+            background: #fafafa;
+            min-height: 80px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .receipt-drop:hover { border-color: var(--green-dark); background: #f5fdf8; }
+        .receipt-hint { font-size: 0.74rem; color: #bbb; margin-top: 0.4rem; }
+
+        /* Complete step */
+        .complete-wrap {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .complete-icon {
+            width: 72px; height: 72px;
+            background: var(--green-light);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.2rem;
+        }
+
+        .complete-icon svg { width: 38px; height: 38px; }
+        .complete-title { font-size: 1.3rem; font-weight: 700; color: var(--green-dark); margin-bottom: 0.5rem; }
+        .complete-sub   { font-size: 0.88rem; color: #777; line-height: 1.6; }
+
+        /* Modal footer */
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem 1.25rem;
+            border-top: 1px solid var(--border);
+            gap: 0.75rem;
+        }
+
+        .modal-footer-left { display: flex; align-items: center; }
+
+        .btn-prev {
+            background: none; border: none; cursor: pointer;
+            display: flex; align-items: center; gap: 0.3rem;
+            font-size: 0.88rem; font-weight: 500; color: #888;
+            font-family: 'Montserrat', sans-serif; padding: 0.5rem 0;
+        }
+
+        .btn-prev:hover { color: #333; }
+        .btn-prev:disabled { opacity: 0.3; cursor: default; }
+
+        .btn-cancel {
+            background: var(--white); border: 1.5px solid var(--border);
+            border-radius: 10px; padding: 0.7rem 1.4rem;
+            font-size: 0.88rem; font-weight: 600; color: #333;
+            cursor: pointer; font-family: 'Montserrat', sans-serif;
+            transition: border-color 0.15s;
+        }
+
+        .btn-cancel:hover { border-color: #999; }
+
+        .btn-next {
+            background: #1a1a1a; border: none;
+            border-radius: 10px; padding: 0.7rem 1.4rem;
+            font-size: 0.88rem; font-weight: 700; color: #fff;
+            cursor: pointer; font-family: 'Montserrat', sans-serif;
+            display: flex; align-items: center; gap: 0.4rem;
+            transition: background 0.15s;
+        }
+
+        .btn-next:hover { background: #333; }
+        .btn-next:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* ─── Slots loading state ─── */
+        .slots-loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem 0;
+            color: #aaa;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid #ddd;
+            border-top-color: var(--green-dark);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Real-time indicator ─── */
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-left: 0.5rem;
+        }
+
+        .live-dot {
+            width: 7px; height: 7px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 1.4s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(0.7); }
+        }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE — Tablet (≤ 820px)
+        ══════════════════════════════════════ */
+        @media (max-width: 820px) {
+            .booking-layout {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            /* Hide court image on left panel when stacked — already visible via card */
+            .b-court-img { max-height: 220px; overflow: hidden; }
+            .b-court-img svg { height: 220px; }
+
+            .booking-wrap { padding: 1.25rem 1.25rem 3rem; }
+
+            .modal { max-width: 100%; border-radius: 16px; }
+        }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE — Mobile (≤ 600px)
+        ══════════════════════════════════════ */
+        @media (max-width: 600px) {
+
+            /* Loading */
+            .loading-glan       { font-size: 2.2rem; }
+            .loading-pickleball { font-size: 4rem; }
+            .loading-community  { font-size: 0.65rem; letter-spacing: 0.4em; }
+
+            /* Header */
+            .header { padding: 0.75rem 1rem; }
+            .header-logo .h-glan   { font-size: 1rem; }
+            .header-logo .h-pickle { font-size: 1.5rem; }
+            .header-logo .h-comm   { font-size: 0.45rem; }
+
+            /* Courts page */
+            .courts-section { padding: 1.5rem 1rem 3rem; }
+            .section-title  { font-size: 1.4rem; }
+            .courts-grid    { grid-template-columns: 1fr; gap: 1rem; }
+
+            /* Court cards */
+            .court-img-wrap { height: 160px; }
+            .court-img-wrap svg { height: 160px; }
+            .court-info { padding: 1rem 1.1rem 1.2rem; }
+            .court-name { font-size: 1.1rem; }
+            .court-price { font-size: 1.1rem; }
+
+            /* Booking page */
+            .booking-wrap { padding: 1rem 1rem 3rem; }
+            .back-btn { font-size: 0.88rem; margin-bottom: 1.2rem; }
+
+            /* Left panel */
+            .b-court-img svg { height: 180px; }
+            .b-court-name { font-size: 1.3rem; }
+            .b-price { font-size: 1.2rem; }
+
+            /* Calendar */
+            .calendar-box { padding: 1rem 0.75rem; }
+            .cal-month-label { font-size: 0.9rem; }
+            .cal-dh { font-size: 0.72rem; padding: 0.3rem 0 0.5rem; }
+            .cal-d  { width: 30px; height: 30px; font-size: 0.78rem; }
+
+            /* Time slots — single column on phone */
+            .slots-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+                max-height: 260px;
+            }
+
+            .slot { padding: 0.65rem 0.75rem; }
+            .slot-time  { font-size: 0.78rem; }
+            .slot-price { font-size: 0.72rem; }
+            .slot-status { top: 0.65rem; right: 0.65rem; font-size: 0.8rem; }
+
+            /* Booking summary strip */
+            .bss-row { padding: 0.55rem 0.85rem; font-size: 0.8rem; }
+
+            /* Confirm button */
+            .confirm-btn { font-size: 0.88rem; padding: 0.85rem; }
+
+            /* ── Modal — full screen on mobile ── */
+            .overlay { padding: 0; align-items: flex-end; }
+
+            .modal {
+                border-radius: 20px 20px 0 0;
+                max-width: 100%;
+                width: 100%;
+                max-height: 92dvh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .modal-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 1rem 1.1rem;
+            }
+
+            /* Steps bar — shrink labels */
+            .steps-bar { padding: 0.75rem 1rem 0.25rem; gap: 0; }
+            .step-circle { width: 30px; height: 30px; font-size: 0.85rem; }
+            .step-label  { font-size: 0.6rem; }
+
+            .step-item:not(:last-child)::after { top: 15px; }
+
+            /* Wizard summary card */
+            .m-summary-card { padding: 0.9rem 1rem; }
+            .m-summary-title { font-size: 0.9rem; }
+            .m-row { font-size: 0.82rem; }
+            .m-total-card { padding: 0.85rem 1rem; }
+            .m-total-amount { font-size: 1.3rem; }
+
+            /* Payment options */
+            .pay-option { padding: 0.75rem 0.9rem; font-size: 0.88rem; }
+
+            /* Modal footer */
+            .modal-footer { padding: 0.85rem 1.1rem 1.1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .modal-footer-left { order: 1; flex: 1; }
+            .modal-footer > div:last-child { order: 2; }
+            .btn-cancel, .btn-next { padding: 0.65rem 1.1rem; font-size: 0.85rem; }
+
+            /* Receipt upload */
+            .receipt-drop { padding: 1rem; min-height: 70px; }
+        }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE — Extra small (≤ 380px)
+        ══════════════════════════════════════ */
+        @media (max-width: 380px) {
+            .slots-grid { grid-template-columns: 1fr; }
+            .cal-d { width: 26px; height: 26px; font-size: 0.72rem; }
+            .step-label { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════ LOADING SCREEN ══════════════════ -->
+<div id="loading-screen">
+    <div class="loading-logo">
+        <span class="loading-glan">GLAN</span>
+        <span class="loading-pickleball">Pickleball</span>
+        <span class="loading-community">COMMUNITY</span>
+        <div class="loading-bar-wrap">
+            <div class="loading-bar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div id="app">
+
+    <!-- ── MAIN PAGE ── -->
+    <div id="main-page">
+        <header class="header">
+            <div class="header-logo">
+                <span class="h-glan">GLAN</span>
+                <span class="h-pickle">Pickleball</span>
+                <span class="h-comm">COMMUNITY</span>
+            </div>
+        </header>
+
+        <div class="courts-section">
+            <h2 class="section-title">Available Courts</h2>
+            <p class="section-subtitle">Book your court &mdash; ₱100 per hour</p>
+            <div class="courts-grid" id="courts-grid"></div>
+        </div>
+    </div>
+
+    <!-- ── BOOKING PAGE ── -->
+    <div id="booking-page">
+        <header class="header">
+            <div class="header-logo">
+                <span class="h-glan">GLAN</span>
+                <span class="h-pickle">Pickleball</span>
+                <span class="h-comm">COMMUNITY</span>
+            </div>
+        </header>
+
+        <div class="booking-wrap">
+            <button class="back-btn" onclick="showMain()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Back to Courts
+            </button>
+
+            <div class="booking-layout">
+                <!-- LEFT -->
+                <div>
+                    <div class="b-court-img">
+                        <svg id="b-court-svg" viewBox="0 0 380 260" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </div>
+                    <h2 class="b-court-name" id="b-court-name"></h2>
+                    <div class="b-loc">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>Glan Pickleball Community<br>Glan, Sarangani Province</span>
+                    </div>
+                    <div class="b-info-section">
+                        <div class="b-info-row">
+                            <span class="b-info-label">Court Information</span>
+                            <span class="b-price">₱100/hour</span>
+                        </div>
+                        <div class="court-tags">
+                            <span class="tag">Pickleball</span>
+                            <span class="tag">Indoor</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT -->
+                <div>
+                    <p class="b-summary-title">Booking Summary</p>
+                    <p class="b-section-label">Select Date &amp; Time</p>
+
+                    <div class="calendar-box">
+                        <div class="cal-header">
+                            <button class="cal-nav" onclick="prevMonth()">&#8249;</button>
+                            <span class="cal-month-label" id="cal-label"></span>
+                            <button class="cal-nav" onclick="nextMonth()">&#8250;</button>
+                        </div>
+                        <div class="cal-grid" id="cal-grid"></div>
+                    </div>
+
+                    <p class="b-section-label">
+                        Available Times
+                        <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+                    </p>
+                    <div class="slots-grid" id="slots-grid"></div>
+
+                    <!-- Booking summary strip -->
+                    <div class="booking-summary-strip" id="bss">
+                        <div class="bss-row">
+                            <span class="bss-label">Date:</span>
+                            <span class="bss-value" id="bss-date"></span>
+                        </div>
+                        <div class="bss-row">
+                            <span class="bss-label">Time:</span>
+                            <span class="bss-value" id="bss-time"></span>
+                        </div>
+                        <div class="bss-row bss-total">
+                            <span class="bss-label">Total:</span>
+                            <span class="bss-value" id="bss-total"></span>
+                        </div>
+                    </div>
+
+                    <button class="confirm-btn" id="confirm-btn" onclick="confirmBooking()" disabled>
+                        Confirm Booking
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── BOOKING WIZARD MODAL ── -->
+<div class="overlay" id="modal">
+    <div class="modal">
+        <!-- Header -->
+        <div class="modal-header">
+            <div class="modal-header-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Complete Your Booking
+            </div>
+            <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+        </div>
+
+        <!-- Steps -->
+        <div class="steps-bar" id="steps-bar"></div>
+
+        <!-- Step content -->
+        <div class="modal-body" id="modal-body"></div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+            <div class="modal-footer-left">
+                <button class="btn-prev" id="btn-prev" onclick="wizardPrev()">
+                    &#8592; Previous
+                </button>
+            </div>
+            <div style="display:flex;gap:0.6rem;">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-next" id="btn-next" onclick="wizardNext()">
+                    Next &#8594;
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── CONFLICT MODAL ── -->
+<div class="overlay" id="conflict-modal">
+    <div class="modal" style="max-width:400px;border-radius:20px;padding:0;overflow:hidden;">
+        <div style="padding:2rem 1.75rem 1.5rem;text-align:center;">
+            <div style="width:64px;height:64px;background:#fff0f0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#e53935"/>
+                </svg>
+            </div>
+            <div style="font-size:1.2rem;font-weight:700;color:#1a1a1a;margin-bottom:0.5rem;">Slot Already Taken</div>
+            <div id="conflict-msg" style="font-size:0.88rem;color:#666;line-height:1.6;margin-bottom:1.5rem;"></div>
+            <button onclick="closeConflictModal()"
+                style="width:100%;padding:0.85rem;background:var(--green-dark);color:#fff;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;">
+                Choose Another Time
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Supabase ───────────────────────────────────────────
+const { createClient } = supabase;
+const db = createClient(
+    'https://qzjaegutlsgtlaworbuy.supabase.co',
+    'sb_publishable_Hy_hFyt_cdZkGV74qjbHlQ_L_gA18rb'
+);
+
+// ── Data ──────────────────────────────────────────────
+// zone: playing area color | kitchen: center strip color | surround: outer color
+const COURTS = [
+    { id: 1, name: 'Pickleball Court 1', zone: '#2E6DB4', kitchen: '#2E8B3A', surround: '#236B2E' },
+    { id: 2, name: 'Pickleball Court 2', zone: '#7B3FA0', kitchen: '#4A1A7A', surround: '#3A1560' },
+    { id: 3, name: 'Pickleball Court 3', zone: '#C0392B', kitchen: '#1A7A6A', surround: '#145A4C' },
+];
+
+const TIME_SLOTS = [
+    '6:00 AM – 7:00 AM',  '7:00 AM – 8:00 AM',
+    '8:00 AM – 9:00 AM',  '9:00 AM – 10:00 AM',
+    '10:00 AM – 11:00 AM','11:00 AM – 12:00 PM',
+    '12:00 PM – 1:00 PM', '1:00 PM – 2:00 PM',
+    '2:00 PM – 3:00 PM',  '3:00 PM – 4:00 PM',
+    '4:00 PM – 5:00 PM',  '5:00 PM – 6:00 PM',
+    '6:00 PM – 7:00 PM',  '7:00 PM – 8:00 PM',
+    '8:00 PM – 9:00 PM',  '9:00 PM – 10:00 PM',
+    '10:00 PM – 11:00 PM','11:00 PM – 12:00 AM',
+];
+
+const MONTHS = ['January','February','March','April','May','June',
+                 'July','August','September','October','November','December'];
+const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+// ── State ─────────────────────────────────────────────
+let curCourt      = null;
+let selDate       = null;
+let bookedSlots   = new Set();   // fetched from Supabase
+let slotsLoading  = false;
+let realtimeChan  = null;
+let calMonth      = new Date().getMonth();
+let calYear       = new Date().getFullYear();
+
+// ── Loading Screen ────────────────────────────────────
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const ls = document.getElementById('loading-screen');
+        ls.classList.add('hide');
+        setTimeout(() => {
+            ls.style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            renderCourts();
+        }, 620);
+    }, 2600);
+});
+
+// ── SVG court art (top-down pickleball court) ────────
+function courtSVGContent(c, w, h) {
+    // Surround padding
+    const pad = Math.round(h * 0.1);
+    const cx  = pad, cy = pad;
+    const cw  = w - pad * 2, ch = h - pad * 2;
+
+    // Kitchen (center strip) is ~28% of court width
+    const kw  = Math.round(cw * 0.28);
+    const kx  = cx + Math.round((cw - kw) / 2);
+
+    // Left & right zone widths
+    const lw  = kx - cx;
+    const rx  = kx + kw;
+    const rw  = (cx + cw) - rx;
+
+    // Horizontal mid-line y (splits each side in two)
+    const my  = cy + Math.round(ch / 2);
+
+    // Dashed line cx
+    const dcx = kx + Math.round(kw / 2);
+
+    return `
+        <!-- surround -->
+        <rect width="${w}" height="${h}" fill="${c.surround}"/>
+
+        <!-- left playing zone (2 quadrants) -->
+        <rect x="${cx}" y="${cy}" width="${lw}" height="${ch}" fill="${c.zone}"/>
+
+        <!-- kitchen (center strip) -->
+        <rect x="${kx}" y="${cy}" width="${kw}" height="${ch}" fill="${c.kitchen}"/>
+
+        <!-- right playing zone (2 quadrants) -->
+        <rect x="${rx}" y="${cy}" width="${rw}" height="${ch}" fill="${c.zone}"/>
+
+        <!-- outer court border -->
+        <rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"
+              fill="none" stroke="white" stroke-width="2.5"/>
+
+        <!-- kitchen side lines -->
+        <line x1="${kx}" y1="${cy}" x2="${kx}" y2="${cy+ch}" stroke="white" stroke-width="2"/>
+        <line x1="${rx}" y1="${cy}" x2="${rx}" y2="${cy+ch}" stroke="white" stroke-width="2"/>
+
+        <!-- horizontal mid-line (left side) -->
+        <line x1="${cx}" y1="${my}" x2="${kx}" y2="${my}" stroke="white" stroke-width="2"/>
+
+        <!-- horizontal mid-line (right side) -->
+        <line x1="${rx}" y1="${my}" x2="${cx+cw}" y2="${my}" stroke="white" stroke-width="2"/>
+
+        <!-- dashed center net line -->
+        <line x1="${dcx}" y1="${cy}" x2="${dcx}" y2="${cy+ch}"
+              stroke="white" stroke-width="2.5"
+              stroke-dasharray="10,8" stroke-linecap="round"/>
+    `;
+}
+
+// ── Render Courts (main page) ─────────────────────────
+function renderCourts() {
+    const grid = document.getElementById('courts-grid');
+    grid.innerHTML = COURTS.map(c => `
+        <div class="court-card">
+            <div class="court-img-wrap">
+                <svg viewBox="0 0 380 200" xmlns="http://www.w3.org/2000/svg">
+                    ${courtSVGContent(c, 380, 200)}
+                </svg>
+            </div>
+            <div class="court-info">
+                <div class="court-name">${c.name}</div>
+                <div class="court-loc">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Glan Pickleball Community, Sarangani Province
+                </div>
+                <div class="court-meta">
+                    <div class="court-tags">
+                        <span class="tag">Pickleball</span>
+                        <span class="tag">Indoor</span>
+                    </div>
+                    <span class="court-price">₱100/hr</span>
+                </div>
+                <button class="book-btn" onclick="openBooking(${c.id})">Book Now</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Open Booking Page ─────────────────────────────────
+function openBooking(courtId) {
+    curCourt  = COURTS.find(c => c.id === courtId);
+    selStart  = -1; selEnd = -1;
+    bookedSlots = new Set();
+    const now = new Date();
+    calMonth  = now.getMonth();
+    calYear   = now.getFullYear();
+    selDate   = toDateStr(now);
+
+    document.getElementById('b-court-name').textContent = curCourt.name;
+
+    const svg = document.getElementById('b-court-svg');
+    svg.innerHTML = courtSVGContent(curCourt, 380, 260);
+
+    document.getElementById('main-page').style.display    = 'none';
+    document.getElementById('booking-page').style.display = 'block';
+    window.scrollTo(0, 0);
+
+    renderCalendar();
+    fetchAndSubscribe();
+}
+
+function showMain() {
+    // Unsubscribe real-time when leaving
+    if (realtimeChan) { db.removeChannel(realtimeChan); realtimeChan = null; }
+    document.getElementById('main-page').style.display    = 'block';
+    document.getElementById('booking-page').style.display = 'none';
+    window.scrollTo(0, 0);
+}
+
+// ── Supabase: fetch + real-time ───────────────────────
+async function fetchAndSubscribe() {
+    await fetchBookedSlots();
+    subscribeRealtime();
+}
+
+async function fetchBookedSlots() {
+    slotsLoading = true;
+    renderSlots();
+
+    const { data, error } = await db
+        .from('bookings')
+        .select('time_slot')
+        .eq('court_id', curCourt.id)
+        .eq('date', selDate);
+
+    slotsLoading = false;
+
+    if (error) {
+        console.error('Supabase fetch error:', error);
+        bookedSlots = new Set();
+    } else {
+        bookedSlots = new Set(data.map(b => b.time_slot));
+        // If a booked slot is inside current selection, reset selection
+        for (let i = selStart; i <= selEnd; i++) {
+            if (i >= 0 && bookedSlots.has(TIME_SLOTS[i])) { selStart = -1; selEnd = -1; break; }
+        }
+    }
+
+    renderSlots();
+    updateConfirm();
+}
+
+function subscribeRealtime() {
+    if (realtimeChan) { db.removeChannel(realtimeChan); }
+
+    realtimeChan = db
+        .channel(`bookings-court${curCourt.id}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'bookings',
+            filter: `court_id=eq.${curCourt.id}`
+        }, payload => {
+            const { date, time_slot } = payload.new;
+            if (date === selDate) {
+                bookedSlots.add(time_slot);
+                // If this user's selection contains the now-booked slot, reset it
+                const idx = TIME_SLOTS.indexOf(time_slot);
+                if (idx >= selStart && idx <= selEnd && selStart !== -1) {
+                    selStart = -1; selEnd = -1;
+                    showSlotTakenToast(time_slot);
+                }
+                renderSlots();
+                updateConfirm();
+            }
+        })
+        .subscribe();
+}
+
+function showSlotTakenToast(slot) {
+    const t = document.createElement('div');
+    t.textContent = `"${slot}" was just booked by someone else.`;
+    Object.assign(t.style, {
+        position: 'fixed', bottom: '1.5rem', left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#323232', color: '#fff',
+        padding: '0.75rem 1.25rem', borderRadius: '8px',
+        fontSize: '0.85rem', zIndex: '500',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+        whiteSpace: 'nowrap'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+// ── Calendar ──────────────────────────────────────────
+function renderCalendar() {
+    document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+    const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+    const firstDay      = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth   = new Date(calYear, calMonth + 1, 0).getDate();
+    const prevDays      = new Date(calYear, calMonth, 0).getDate();
+
+    let html = DAYS.map(d => `<div class="cal-dh">${d}</div>`).join('');
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+        html += `<div class="cal-d-wrap"><div class="cal-d cal-other">${prevDays - i}</div></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dt  = new Date(calYear, calMonth, d);
+        const str = toDateStr(dt);
+        const past = dt < todayMidnight;
+        let cls = 'cal-d';
+        if (past)                                          cls += ' cal-past';
+        else if (str === selDate)                          cls += ' cal-sel';
+        else if (dt.getTime() === todayMidnight.getTime()) cls += ' cal-today';
+        const click = past ? '' : `onclick="pickDate('${str}')"`;
+        html += `<div class="cal-d-wrap"><div class="${cls}" ${click}>${d}</div></div>`;
+    }
+
+    const total  = firstDay + daysInMonth;
+    const remain = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let i = 1; i <= remain; i++) {
+        html += `<div class="cal-d-wrap"><div class="cal-d cal-other">${i}</div></div>`;
+    }
+
+    document.getElementById('cal-grid').innerHTML = html;
+}
+
+function pickDate(str) {
+    selDate  = str;
+    selStart = -1; selEnd = -1;
+    renderCalendar();
+    fetchAndSubscribe();
+    updateConfirm();
+}
+
+function prevMonth() {
+    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+    renderCalendar();
+}
+
+function nextMonth() {
+    calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+    renderCalendar();
+}
+
+// ── Time Slots ────────────────────────────────────────
+// selSlots is now always a sorted, continuous range tracked as [startIdx, endIdx]
+let selStart = -1, selEnd = -1;  // indices into TIME_SLOTS
+
+function getSelSlotRange() {
+    if (selStart === -1) return [];
+    const arr = [];
+    for (let i = selStart; i <= selEnd; i++) arr.push(TIME_SLOTS[i]);
+    return arr;
+}
+
+function isAdjacentToSel(idx) {
+    if (selStart === -1) return true;          // nothing selected yet
+    return idx === selStart - 1 || idx === selEnd + 1;
+}
+
+function renderSlots() {
+    const grid = document.getElementById('slots-grid');
+
+    if (slotsLoading) {
+        grid.innerHTML = `<div class="slots-loading"><div class="spinner"></div> Loading availability…</div>`;
+        return;
+    }
+
+    // Check if the range has a booked slot inside it — clear if so
+    for (let i = selStart; i <= selEnd; i++) {
+        if (i >= 0 && bookedSlots.has(TIME_SLOTS[i])) { selStart = -1; selEnd = -1; break; }
+    }
+
+    grid.innerHTML = TIME_SLOTS.map((slot, idx) => {
+        const booked = bookedSlots.has(slot);
+        const inSel  = selStart !== -1 && idx >= selStart && idx <= selEnd;
+
+        // Dim non-adjacent slots when a selection exists
+        const blocked = !booked && selStart !== -1 && !inSel && !isAdjacentToSel(idx);
+
+        let cls = 'slot';
+        if (booked)  cls += ' slot-booked';
+        if (inSel)   cls += ' slot-sel';
+        if (blocked) cls += ' slot-dim';
+
+        const click = (booked || blocked) ? '' : `onclick="toggleSlot(${idx})"`;
+
+        const statusIcon = booked
+            ? `<span class="slot-status" style="color:#ef5350">✕</span>`
+            : inSel
+                ? `<span class="slot-status" style="color:#4CAF50">✓</span>`
+                : `<span class="slot-status" style="color:#ccc">✓</span>`;
+
+        const bookedLbl = booked ? `<div class="slot-booked-lbl">Booked</div>` : '';
+
+        return `
+            <div class="${cls}" ${click}>
+                <div class="slot-time">${slot}</div>
+                <div class="slot-price">₱100</div>
+                ${bookedLbl}
+                ${statusIcon}
+            </div>`;
+    }).join('');
+}
+
+function toggleSlot(idx) {
+    if (bookedSlots.has(TIME_SLOTS[idx])) return;
+
+    if (selStart === -1) {
+        // Start fresh selection
+        selStart = idx; selEnd = idx;
+    } else if (idx === selStart - 1) {
+        selStart = idx;                        // extend left
+    } else if (idx === selEnd + 1) {
+        selEnd = idx;                          // extend right
+    } else if (idx >= selStart && idx <= selEnd) {
+        // Deselect from an end only
+        if (idx === selStart && idx === selEnd) { selStart = -1; selEnd = -1; }
+        else if (idx === selStart) selStart++;
+        else if (idx === selEnd)   selEnd--;
+        else { selStart = -1; selEnd = -1; }   // clicked middle — reset
+    } else {
+        // Non-adjacent — start new selection
+        selStart = idx; selEnd = idx;
+    }
+
+    renderSlots();
+    updateConfirm();
+}
+
+function updateConfirm() {
+    const btn  = document.getElementById('confirm-btn');
+    const bss  = document.getElementById('bss');
+    const n    = selStart === -1 ? 0 : selEnd - selStart + 1;
+
+    if (n > 0 && selDate) {
+        const amount  = n * 100;
+        const slots   = getSelSlotRange();
+        const timeStr = slotRangeLabel(slots);
+        const dateStr = shortDate(selDate);
+
+        btn.disabled    = false;
+        btn.textContent = `Confirm Booking — ₱${amount.toLocaleString()}`;
+
+        document.getElementById('bss-date').textContent   = dateStr;
+        document.getElementById('bss-time').textContent   = timeStr;
+        document.getElementById('bss-total').textContent  = `₱${amount.toFixed(2)}`;
+        bss.style.display = 'block';
+    } else {
+        btn.disabled    = true;
+        btn.textContent = 'Confirm Booking';
+        bss.style.display = 'none';
+    }
+}
+
+// Returns "6:00 AM – 8:00 AM" from the slot range
+function slotRangeLabel(slots) {
+    if (!slots.length) return '';
+    const first = slots[0].split('–')[0].trim();
+    const last  = slots[slots.length - 1].split('–')[1].trim();
+    return `${first} - ${last}`;
+}
+
+function shortDate(str) {
+    const d = new Date(str + 'T00:00:00');
+    return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── Booking Wizard ────────────────────────────────────
+const WIZARD_STEPS = [
+    { label: 'Review Booking', icon: '📋' },
+    { label: 'Phone Number',   icon: '📞' },
+    { label: 'Payment',        icon: '💳' },
+    { label: 'Complete',       icon: '✓'  },
+];
+
+let wizardStep  = 0;
+let bookingPhone = '';
+let bookingPayment = '';
+
+function confirmBooking() {
+    if (selStart === -1 || !selDate) return;
+    wizardStep   = 0;
+    bookingPhone = '';
+    bookingPayment = '';
+    document.getElementById('modal').classList.add('show');
+    renderWizard();
+}
+
+function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+    window._bookingRef = null;
+}
+
+function renderWizard() {
+    renderStepsBar();
+    renderStepContent();
+    renderWizardFooter();
+}
+
+function renderStepsBar() {
+    const bar = document.getElementById('steps-bar');
+    bar.innerHTML = WIZARD_STEPS.map((s, i) => {
+        let cls = 'step-item';
+        if (i === wizardStep) cls += ' active';
+        if (i < wizardStep)  cls += ' done';
+        const icon = i < wizardStep
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+            : s.icon;
+        return `
+            <div class="${cls}">
+                <div class="step-circle">${icon}</div>
+                <div class="step-label">${s.label}</div>
+            </div>`;
+    }).join('');
+}
+
+function renderStepContent() {
+    const body    = document.getElementById('modal-body');
+    const slots   = getSelSlotRange();
+    const n       = slots.length;
+    const amount  = n * 100;
+    const timeStr = slotRangeLabel(slots);
+    const dateStr = formatDate(selDate);
+
+    if (wizardStep === 0) {
+        body.innerHTML = `
+            <div class="m-summary-card">
+                <div class="m-summary-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Booking Summary
+                </div>
+                <div class="m-row"><span class="m-row-icon">📍</span><span><strong>Facility:</strong> Glan Pickleball Community</span></div>
+                <div class="m-row"><span class="m-row-icon">🏓</span><span><strong>Court:</strong> ${curCourt.name}</span></div>
+                <div class="m-row"><span class="m-row-icon">📅</span><span><strong>Date:</strong> ${dateStr}</span></div>
+                <div class="m-row"><span class="m-row-icon">🕐</span><span><strong>Time:</strong> ${timeStr}</span></div>
+                <div class="m-row"><span class="m-row-icon">⏱</span><span><strong>Duration:</strong> ${n} hour${n > 1 ? 's' : ''}</span></div>
+            </div>
+            <div class="m-total-card">
+                <div class="m-total-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Total Amount
+                </div>
+                <div class="m-total-amount">₱${amount.toLocaleString()}</div>
+            </div>`;
+
+    } else if (wizardStep === 1) {
+        body.innerHTML = `
+            <div class="phone-field">
+                <label>Phone Number</label>
+                <input type="tel" id="phone-input" placeholder="e.g. 09171234567"
+                       value="${bookingPhone}"
+                       oninput="bookingPhone = this.value; renderWizardFooter()"
+                       maxlength="11"/>
+                <div class="hint">Enter your 11-digit Philippine mobile number.</div>
+            </div>`;
+        setTimeout(() => document.getElementById('phone-input')?.focus(), 50);
+
+    } else if (wizardStep === 2) {
+        body.innerHTML = `
+            <p style="font-size:0.88rem;color:#555;margin-bottom:1rem;">Select your payment method:</p>
+            <div class="pay-options">
+                ${[['💸','GCash'],['💵','Cash on Site']].map(([icon, label]) => `
+                    <div class="pay-option ${bookingPayment === label ? 'pay-sel' : ''}"
+                         onclick="bookingPayment='${label}'; renderWizard()">
+                        <span class="pay-icon">${icon}</span> ${label}
+                    </div>`).join('')}
+            </div>`;
+
+    } else if (wizardStep === 3) {
+        // Generate a booking reference once per booking
+        if (!window._bookingRef) window._bookingRef = 'GPC-' + Date.now().toString(36).toUpperCase();
+        const ref = window._bookingRef;
+
+        const dlBtn = (label) => `
+            <button onclick="downloadReceipt()" style="
+                display:inline-flex;align-items:center;gap:0.4rem;
+                background:var(--green-dark);color:#fff;border:none;border-radius:8px;
+                padding:0.6rem 1.1rem;font-size:0.82rem;font-weight:600;
+                cursor:pointer;font-family:'Montserrat',sans-serif;margin-top:0.75rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                ${label}
+            </button>`;
+
+        const isGcash = bookingPayment === 'GCash';
+        body.innerHTML = isGcash ? `
+            <div style="text-align:center;margin-bottom:1rem;">
+                <p style="font-size:0.88rem;color:#555;margin-bottom:0.75rem;">
+                    Scan the QR code below to pay via <strong>GCash</strong>
+                </p>
+                <div style="display:inline-block;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;margin-bottom:0.65rem;">
+                    <div id="qr-svg-wrap">
+                        <img src="qr-gcash.png" alt="GCash QR Code"
+                             style="width:180px;height:180px;object-fit:contain;display:block;"/>
+                    </div>
+                </div>
+                <br>
+                <button onclick="downloadQR()" style="
+                    display:inline-flex;align-items:center;gap:0.4rem;
+                    background:none;border:1.5px solid var(--green-dark);
+                    color:var(--green-dark);border-radius:8px;
+                    padding:0.45rem 1rem;font-size:0.8rem;font-weight:600;
+                    cursor:pointer;font-family:'Montserrat',sans-serif;
+                    margin-bottom:0.75rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Download QR Code
+                </button>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--green-dark);margin-bottom:0.2rem;">₱${amount.toLocaleString()}</div>
+                <div style="font-size:0.8rem;color:#888;margin-bottom:0.5rem;">Amount to pay</div>
+                ${dlBtn('Download Backup Receipt')}
+            </div>
+            <div class="receipt-upload" id="receipt-upload-wrap">
+                <label class="receipt-label">Upload GCash Payment Screenshot</label>
+                <div class="receipt-drop" onclick="document.getElementById('receipt-file').click()">
+                    <div id="receipt-preview-wrap">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div style="font-size:0.82rem;color:#aaa;margin-top:0.4rem;">Click to upload screenshot</div>
+                    </div>
+                </div>
+                <input type="file" id="receipt-file" accept="image/*" style="display:none"
+                       onchange="handleReceiptUpload(this)"/>
+                <div class="receipt-hint">JPG, PNG accepted</div>
+            </div>` : `
+            <div style="text-align:center;padding:1rem 0 0.5rem;">
+                <div style="font-size:3rem;margin-bottom:0.5rem;">🏓</div>
+                <div style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin-bottom:0.4rem;">Pay at the Counter</div>
+                <div style="font-size:0.88rem;color:#777;line-height:1.6;margin-bottom:1rem;">
+                    Please pay <strong style="color:var(--green-dark)">₱${amount.toLocaleString()}</strong> upon arrival.<br>
+                    Show your receipt to the facility staff.
+                </div>
+                <div style="background:#f0faf4;border:1px solid #b2dfca;border-radius:10px;padding:1rem;font-size:0.85rem;color:#333;text-align:left;margin-bottom:0.25rem;">
+                    <strong>${curCourt.name}</strong><br>
+                    ${shortDate(selDate)} &bull; ${timeStr}<br>
+                    ${n} hour${n>1?'s':''} &bull; Contact: ${bookingPhone}
+                </div>
+                ${dlBtn('Download Receipt')}
+            </div>`;
+    }
+}
+
+
+let receiptFile = null;
+
+function downloadQR() {
+    const a = document.createElement('a');
+    a.href     = 'qr-gcash.png';
+    a.download = 'GlanPickleball-GCash-QR.png';
+    a.click();
+}
+
+function downloadReceipt() {
+    const slots   = getSelSlotRange();
+    const n       = slots.length;
+    const amount  = n * 100;
+    const timeStr = slotRangeLabel(slots);
+    const dateStr = formatDate(selDate);
+    const ref     = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
+    const isGcash = bookingPayment === 'GCash';
+
+    const W = 600, pad = 40;
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+
+    // Measure height dynamically
+    canvas.width  = W;
+    canvas.height = 10; // temp, will resize
+
+    // ── Helper ──
+    const line  = (y) => { ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W-pad, y); ctx.stroke(); };
+    const row   = (label, value, y, bold) => {
+        ctx.font = bold ? 'bold 18px Arial' : '17px Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, pad, y);
+        ctx.font = bold ? 'bold 18px Arial' : '17px Arial';
+        ctx.fillStyle = bold ? '#1e5c45' : '#111';
+        ctx.textAlign = 'right';
+        ctx.fillText(value, W - pad, y);
+    };
+
+    // Calculate total height
+    const totalH = 620;
+    canvas.height = totalH;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, totalH);
+
+    // Top green bar
+    ctx.fillStyle = '#1e5c45';
+    ctx.fillRect(0, 0, W, 90);
+
+    // Header text
+    ctx.fillStyle = '#f5f8e0';
+    ctx.font      = 'bold 26px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GLAN PICKLEBALL COMMUNITY', W/2, 38);
+    ctx.font      = '16px Arial';
+    ctx.fillStyle = 'rgba(245,248,224,0.8)';
+    ctx.fillText('BOOKING RECEIPT', W/2, 62);
+    ctx.font      = '13px Arial';
+    ctx.fillStyle = 'rgba(245,248,224,0.6)';
+    ctx.fillText('Glan, Sarangani Province', W/2, 82);
+
+    // Status badge
+    const badgeY = 110;
+    ctx.fillStyle = isGcash ? '#e8f5e9' : '#fff8e1';
+    ctx.beginPath();
+    ctx.roundRect(W/2 - 90, badgeY - 18, 180, 32, 16);
+    ctx.fill();
+    ctx.fillStyle = isGcash ? '#1e5c45' : '#e65100';
+    ctx.font      = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(isGcash ? '✓  PAID VIA GCASH' : '⏳  PAY ON ARRIVAL', W/2, badgeY + 6);
+
+    // Reference
+    ctx.fillStyle = '#aaa';
+    ctx.font      = '13px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Ref: ${ref}`, W/2, 162);
+
+    // Divider
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth   = 1;
+    line(178);
+
+    // Rows
+    let y = 210;
+    const gap = 42;
+    ctx.textAlign = 'left';
+
+    const rows = [
+        ['Court',    curCourt.name,                   false],
+        ['Date',     dateStr,                          false],
+        ['Time',     timeStr,                          false],
+        ['Duration', `${n} hour${n>1?'s':''}`,         false],
+        ['Payment',  bookingPayment,                   false],
+        ['Contact',  bookingPhone,                     false],
+    ];
+
+    rows.forEach(([label, value, bold]) => {
+        row(label, value, y, bold);
+        y += gap;
+    });
+
+    line(y + 4);
+    y += 36;
+    row('TOTAL AMOUNT', `P${amount.toLocaleString()}.00`, y, true);
+
+    // Dashed divider
+    y += 50;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = '#ccc';
+    line(y);
+    ctx.setLineDash([]);
+
+    // Footer
+    y += 30;
+    ctx.fillStyle = '#aaa';
+    ctx.font      = '13px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Thank you for booking with us!', W/2, y);
+    y += 22;
+    ctx.fillText('Please present this receipt at the facility.', W/2, y);
+    y += 22;
+    ctx.font = '11px Arial';
+    ctx.fillText(`Generated: ${new Date().toLocaleString('en-PH')}`, W/2, y);
+
+    // Bottom bar
+    ctx.fillStyle = '#1e5c45';
+    ctx.fillRect(0, totalH - 14, W, 14);
+
+    // Download
+    const a = document.createElement('a');
+    a.href     = canvas.toDataURL('image/jpeg', 0.95);
+    a.download = `GlanPickleball-Receipt-${ref}.jpg`;
+    a.click();
+}
+
+function handleReceiptUpload(input) {
+    receiptFile = input.files[0] || null;
+    const wrap = document.getElementById('receipt-preview-wrap');
+    if (receiptFile && wrap) {
+        const url = URL.createObjectURL(receiptFile);
+        wrap.innerHTML = `<img src="${url}" style="max-width:100%;max-height:120px;border-radius:8px;object-fit:contain;"/>
+            <div style="font-size:0.78rem;color:var(--green-dark);margin-top:0.4rem;">✓ ${receiptFile.name}</div>`;
+    }
+    renderWizardFooter();
+}
+
+function renderWizardFooter() {
+    const prev = document.getElementById('btn-prev');
+    const next = document.getElementById('btn-next');
+
+    prev.disabled = wizardStep === 0;
+
+    if (wizardStep === 3) {
+        next.textContent = 'Done';
+        // GCash requires receipt upload; Cash on Site does not
+        next.disabled = bookingPayment === 'GCash' && !receiptFile;
+    } else {
+        next.innerHTML = 'Next &#8594;';
+        if (wizardStep === 1)      next.disabled = bookingPhone.length < 10;
+        else if (wizardStep === 2) next.disabled = !bookingPayment;
+        else                       next.disabled = false;
+    }
+}
+
+async function wizardNext() {
+    if (wizardStep === 3) { await finishBooking(); return; }
+    if (wizardStep === 2) receiptFile = null; // reset receipt when re-entering payment step
+    wizardStep++;
+    renderWizard();
+}
+
+function wizardPrev() {
+    if (wizardStep === 0) return;
+    wizardStep--;
+    renderWizard();
+}
+
+async function finishBooking() {
+    const slots = getSelSlotRange();
+    const rows  = slots.map(slot => ({
+        court_id:       curCourt.id,
+        date:           selDate,
+        time_slot:      slot,
+        phone:          bookingPhone,
+        payment_method: bookingPayment
+    }));
+
+    const next = document.getElementById('btn-next');
+    next.disabled    = true;
+    next.textContent = 'Saving…';
+
+    const { error } = await db.from('bookings').insert(rows);
+
+    if (error) {
+        console.error('Supabase insert error:', JSON.stringify(error));
+
+        // Unique constraint violation — someone else just grabbed the slot
+        const isConflict = error.code === '23505' ||
+                           (error.message && error.message.toLowerCase().includes('unique'));
+
+        next.disabled    = false;
+        next.textContent = 'Done';
+        closeModal();
+
+        if (isConflict) {
+            // Refresh so the newly-booked slots show as taken
+            await fetchBookedSlots();
+            selStart = -1; selEnd = -1;
+            updateConfirm();
+
+            const timeStr = slotRangeLabel(slots);
+            const dateStr = shortDate(selDate);
+            document.getElementById('conflict-msg').innerHTML =
+                `<strong>${timeStr}</strong> on <strong>${dateStr}</strong> was just booked by someone else.<br><br>
+                 Please select a different time slot.`;
+            document.getElementById('conflict-modal').classList.add('show');
+        } else {
+            alert('Booking failed. Please try again.');
+        }
+        return;
+    }
+
+    closeModal();
+    receiptFile = null;
+    selStart = -1; selEnd = -1;
+    await fetchBookedSlots();
+    updateConfirm();
+}
+
+function closeConflictModal() {
+    document.getElementById('conflict-modal').classList.remove('show');
+}
+
+// ── Helpers ───────────────────────────────────────────
+function toDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(str) {
+    const d = new Date(str + 'T00:00:00');
+    return d.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+</script>
+</body>
+</html>
