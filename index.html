@@ -1891,7 +1891,7 @@ async function finishBooking() {
                  Please select a different time slot.`;
             document.getElementById('conflict-modal').classList.add('show');
         } else {
-            alert('Booking failed. Please try again.');
+            alert('Booking failed: ' + (error.message || JSON.stringify(error)));
         }
         return;
     }
