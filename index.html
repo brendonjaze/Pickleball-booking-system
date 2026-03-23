@@ -1852,13 +1852,15 @@ function wizardPrev() {
 
 async function finishBooking() {
     const slots = getSelSlotRange();
+    const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
     const rows  = slots.map(slot => ({
         court_id:       curCourt.id,
         date:           selDate,
         time_slot:      slot,
         name:           bookingName,
         phone:          bookingPhone,
-        payment_method: bookingPayment
+        payment_method: bookingPayment,
+        booking_ref:    bookingRef
     }));
 
     const next = document.getElementById('btn-next');
@@ -1891,7 +1893,7 @@ async function finishBooking() {
                  Please select a different time slot.`;
             document.getElementById('conflict-modal').classList.add('show');
         } else {
-            alert('Booking failed: ' + (error.message || JSON.stringify(error)));
+            alert('Booking failed. Please try again.');
         }
         return;
     }
