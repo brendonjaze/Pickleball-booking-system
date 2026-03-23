@@ -1496,13 +1496,15 @@ const WIZARD_STEPS = [
 ];
 
 let wizardStep  = 0;
+let bookingName  = '';
 let bookingPhone = '';
 let bookingPayment = '';
 
 function confirmBooking() {
     if (selStart === -1 || !selDate) return;
-    wizardStep   = 0;
-    bookingPhone = '';
+    wizardStep    = 0;
+    bookingName   = '';
+    bookingPhone  = '';
     bookingPayment = '';
     document.getElementById('modal').classList.add('show');
     renderWizard();
@@ -1568,6 +1570,13 @@ function renderStepContent() {
     } else if (wizardStep === 1) {
         body.innerHTML = `
             <div class="phone-field">
+                <label>Name</label>
+                <input type="text" id="name-input" placeholder="e.g. Juan Dela Cruz"
+                       value="${bookingName}"
+                       oninput="bookingName = this.value.trim(); renderWizardFooter()"/>
+                <div class="hint">Enter your full name.</div>
+            </div>
+            <div class="phone-field" style="margin-top:1rem;">
                 <label>Phone Number</label>
                 <input type="tel" id="phone-input" placeholder="e.g. 09171234567"
                        value="${bookingPhone}"
@@ -1575,7 +1584,7 @@ function renderStepContent() {
                        maxlength="11"/>
                 <div class="hint">Enter your 11-digit Philippine mobile number.</div>
             </div>`;
-        setTimeout(() => document.getElementById('phone-input')?.focus(), 50);
+        setTimeout(() => document.getElementById('name-input')?.focus(), 50);
 
     } else if (wizardStep === 2) {
         body.innerHTML = `
@@ -1652,7 +1661,7 @@ function renderStepContent() {
                 <div style="background:#f0faf4;border:1px solid #b2dfca;border-radius:10px;padding:1rem;font-size:0.85rem;color:#333;text-align:left;margin-bottom:0.25rem;">
                     <strong>${curCourt.name}</strong><br>
                     ${shortDate(selDate)} &bull; ${timeStr}<br>
-                    ${n} hour${n>1?'s':''} &bull; Contact: ${bookingPhone}
+                    ${n} hour${n>1?'s':''} &bull; ${bookingName} &bull; Contact: ${bookingPhone}
                 </div>
                 ${dlBtn('Download Receipt')}
             </div>`;
@@ -1756,6 +1765,7 @@ function downloadReceipt() {
         ['Time',     timeStr,                          false],
         ['Duration', `${n} hour${n>1?'s':''}`,         false],
         ['Payment',  bookingPayment,                   false],
+        ['Name',     bookingName,                      false],
         ['Contact',  bookingPhone,                     false],
     ];
 
@@ -1821,7 +1831,7 @@ function renderWizardFooter() {
         next.disabled = bookingPayment === 'GCash' && !receiptFile;
     } else {
         next.innerHTML = 'Next &#8594;';
-        if (wizardStep === 1)      next.disabled = bookingPhone.length < 10;
+        if (wizardStep === 1)      next.disabled = bookingName.length < 2 || bookingPhone.length < 10;
         else if (wizardStep === 2) next.disabled = !bookingPayment;
         else                       next.disabled = false;
     }
@@ -1842,12 +1852,15 @@ function wizardPrev() {
 
 async function finishBooking() {
     const slots = getSelSlotRange();
+    const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
     const rows  = slots.map(slot => ({
         court_id:       curCourt.id,
         date:           selDate,
         time_slot:      slot,
+        name:           bookingName,
         phone:          bookingPhone,
-        payment_method: bookingPayment
+        payment_method: bookingPayment,
+        booking_ref:    bookingRef
     }));
 
     const next = document.getElementById('btn-next');
