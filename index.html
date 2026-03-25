@@ -4,9 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glan Pickleball Community</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Dancing+Script:wght@700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.min.js"></script>
     <style>
+        /* ── Local fonts (offline-ready) ─────────────────── */
+        @font-face { font-family: 'Dancing Script'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/dancing-script-700.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 300; font-style: normal; font-display: swap; src: url('fonts/montserrat-300.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('fonts/montserrat-400.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 500; font-style: normal; font-display: swap; src: url('fonts/montserrat-500.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('fonts/montserrat-600.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/montserrat-700.ttf') format('truetype'); }
+        @font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/playfair-display-700.ttf') format('truetype'); }
+
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         /* Prevent horizontal scroll without breaking vertical scrolling on mobile */
@@ -323,6 +331,64 @@
 
         .cal-d.cal-past  { color: #ccc !important; cursor: not-allowed; }
         .cal-d.cal-other { color: #d5d5d5 !important; cursor: default; font-weight: 400; }
+
+        /* Fully booked day indicator */
+        .cal-d.cal-full {
+            position: relative;
+            color: #b0b0b0 !important;
+            cursor: not-allowed;
+            text-decoration: line-through;
+            text-decoration-color: rgba(220, 53, 69, 0.5);
+            text-decoration-thickness: 2px;
+        }
+        .cal-d.cal-full::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #dc3545;
+            box-shadow: 0 0 4px rgba(220, 53, 69, 0.5);
+        }
+        .cal-d.cal-full:hover {
+            background: rgba(220, 53, 69, 0.08) !important;
+            color: #b0b0b0 !important;
+        }
+
+        .cal-legend {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: #888;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .cal-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .cal-legend-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .cal-legend-dot.dot-today {
+            background: var(--green-dark);
+        }
+        .cal-legend-dot.dot-selected {
+            background: var(--green-dark);
+            outline: 2px solid var(--green-light);
+        }
+        .cal-legend-dot.dot-full {
+            background: #dc3545;
+            box-shadow: 0 0 4px rgba(220, 53, 69, 0.5);
+        }
 
         /* Time slots */
         .slots-grid {
@@ -973,6 +1039,10 @@
                             <button class="cal-nav" onclick="nextMonth()">&#8250;</button>
                         </div>
                         <div class="cal-grid" id="cal-grid"></div>
+                        <div class="cal-legend">
+                            <div class="cal-legend-item"><div class="cal-legend-dot dot-today"></div>Today</div>
+                            <div class="cal-legend-item"><div class="cal-legend-dot dot-full"></div>Fully Booked</div>
+                        </div>
                     </div>
 
                     <p class="b-section-label">
@@ -1100,6 +1170,14 @@ let slotsLoading  = false;
 let realtimeChan  = null;
 let calMonth      = new Date().getMonth();
 let calYear       = new Date().getFullYear();
+let fullyBookedDates = new Set(); // dates where all slots are booked for current court
+
+// ── Unregister stale service workers from other projects ──
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+    });
+}
 
 // ── Loading Screen ────────────────────────────────────
 window.addEventListener('load', () => {
@@ -1223,6 +1301,7 @@ function openBooking(courtId) {
 
     renderCalendar();
     fetchAndSubscribe();
+    fetchFullyBookedDates();
 }
 
 function showMain() {
@@ -1309,6 +1388,36 @@ function showSlotTakenToast(slot) {
     setTimeout(() => t.remove(), 3500);
 }
 
+// ── Fully Booked Detection ────────────────────────────
+async function fetchFullyBookedDates() {
+    if (!curCourt) return;
+    const totalSlots = TIME_SLOTS.length;
+    const startDate = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(calYear, calMonth + 1, 0).getDate();
+    const endDate = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const { data, error } = await db
+        .from('bookings')
+        .select('date, time_slot')
+        .eq('court_id', curCourt.id)
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+    if (error) { console.error('Fully booked fetch error:', error); return; }
+
+    // Count bookings per date
+    const countByDate = {};
+    data.forEach(b => {
+        countByDate[b.date] = (countByDate[b.date] || 0) + 1;
+    });
+
+    fullyBookedDates = new Set();
+    for (const [date, count] of Object.entries(countByDate)) {
+        if (count >= totalSlots) fullyBookedDates.add(date);
+    }
+    renderCalendar();
+}
+
 // ── Calendar ──────────────────────────────────────────
 function renderCalendar() {
     document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
@@ -1328,12 +1437,15 @@ function renderCalendar() {
         const dt  = new Date(calYear, calMonth, d);
         const str = toDateStr(dt);
         const past = dt < todayMidnight;
+        const full = !past && fullyBookedDates.has(str);
         let cls = 'cal-d';
         if (past)                                          cls += ' cal-past';
+        else if (full)                                     cls += ' cal-full';
         else if (str === selDate)                          cls += ' cal-sel';
         else if (dt.getTime() === todayMidnight.getTime()) cls += ' cal-today';
-        const click = past ? '' : `onclick="pickDate('${str}')"`;
-        html += `<div class="cal-d-wrap"><div class="${cls}" ${click}>${d}</div></div>`;
+        const click = (past || full) ? '' : `onclick="pickDate('${str}')"`;
+        const title = full ? 'title="Fully booked"' : '';
+        html += `<div class="cal-d-wrap"><div class="${cls}" ${click} ${title}>${d}</div></div>`;
     }
 
     const total  = firstDay + daysInMonth;
@@ -1356,11 +1468,13 @@ function pickDate(str) {
 function prevMonth() {
     calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
     renderCalendar();
+    fetchFullyBookedDates();
 }
 
 function nextMonth() {
     calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
     renderCalendar();
+    fetchFullyBookedDates();
 }
 
 // ── Time Slots ────────────────────────────────────────
@@ -1920,6 +2034,7 @@ async function finishBooking() {
     selStart = -1; selEnd = -1;
     await fetchBookedSlots();
     updateConfirm();
+    fetchFullyBookedDates();
 }
 
 function closeConflictModal() {
