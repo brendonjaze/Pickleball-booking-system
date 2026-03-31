@@ -7,13 +7,13 @@
     <script src="supabase.min.js"></script>
     <style>
         /* ── Local fonts (offline-ready) ─────────────────── */
-        @font-face { font-family: 'Dancing Script'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/dancing-script-700-DvaMCgQG.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 300; font-style: normal; font-display: swap; src: url('./assets/montserrat-300-DoRPafQT.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('./assets/montserrat-400-nzdtX8SM.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 500; font-style: normal; font-display: swap; src: url('./assets/montserrat-500-Ci8EClub.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('./assets/montserrat-600-CHfolbyA.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/montserrat-700-w_OrssVO.ttf') format('truetype'); }
-        @font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/playfair-display-700-Dle4x85Y.ttf') format('truetype'); }
+        @font-face { font-family: 'Dancing Script'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/dancing-script-700.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 300; font-style: normal; font-display: swap; src: url('fonts/montserrat-300.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('fonts/montserrat-400.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 500; font-style: normal; font-display: swap; src: url('fonts/montserrat-500.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('fonts/montserrat-600.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/montserrat-700.ttf') format('truetype'); }
+        @font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/playfair-display-700.ttf') format('truetype'); }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -158,8 +158,8 @@
 
         .court-card:hover { transform: translateY(-5px); box-shadow: 0 10px 32px rgba(0,0,0,0.13); }
 
-        .court-img-wrap { width: 100%; height: 200px; overflow: hidden; flex-shrink: 0; }
-        .court-img-wrap svg { width: 100%; height: 100%; }
+        .court-img-wrap { width: 100%; height: 240px; overflow: hidden; flex-shrink: 0; display: flex; justify-content: center; align-items: center; background: #1a3a2a; }
+        .court-img-wrap svg { width: auto; height: 100%; max-width: 100%; }
 
         .court-info {
             padding: 1.4rem 1.5rem 1.5rem;
@@ -235,8 +235,8 @@
         }
 
         /* Left */
-        .b-court-img { width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 1.4rem; }
-        .b-court-img svg { width: 100%; height: 260px; display: block; }
+        .b-court-img { width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 1.4rem; display: flex; justify-content: center; align-items: center; background: #1a3a2a; }
+        .b-court-img svg { width: auto; height: 300px; max-width: 100%; display: block; }
 
         .b-court-name { font-size: 1.7rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.5rem; }
         .b-loc {
@@ -829,9 +829,8 @@
                 gap: 1.5rem;
             }
 
-            /* Hide court image on left panel when stacked — already visible via card */
-            .b-court-img { max-height: 220px; overflow: hidden; }
-            .b-court-img svg { height: 220px; }
+            .b-court-img { max-height: 260px; overflow: hidden; }
+            .b-court-img svg { height: 260px; }
 
             .booking-wrap { padding: 1.25rem 1.25rem 3rem; }
 
@@ -860,8 +859,8 @@
             .courts-grid    { grid-template-columns: 1fr; gap: 1rem; }
 
             /* Court cards */
-            .court-img-wrap { height: 160px; }
-            .court-img-wrap svg { height: 160px; }
+            .court-img-wrap { height: 200px; }
+            .court-img-wrap svg { height: 200px; }
             .court-info { padding: 1rem 1.1rem 1.2rem; }
             .court-name { font-size: 1.1rem; }
             .court-price { font-size: 1.1rem; }
@@ -871,7 +870,7 @@
             .back-btn { font-size: 0.88rem; margin-bottom: 1.2rem; }
 
             /* Left panel */
-            .b-court-img svg { height: 180px; }
+            .b-court-img svg { height: 220px; }
             .b-court-name { font-size: 1.3rem; }
             .b-price { font-size: 1.2rem; }
 
@@ -952,6 +951,48 @@
             .cal-d { width: 26px; height: 26px; font-size: 0.72rem; }
             .step-label { display: none; }
         }
+
+        /* ══════════════════════════════════════
+           ANNOUNCEMENT BANNER
+        ══════════════════════════════════════ */
+        .announcement-banner {
+            background: #fef2f2;
+            border-left: 4px solid #c0392b;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .announcement-banner h3 {
+            color: #c0392b;
+            margin: 0 0 0.35rem 0;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .announcement-banner p {
+            color: #c0392b;
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Locked slot */
+        .slot-locked {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            position: relative;
+        }
+        .slot-locked-lbl {
+            font-size: 0.7rem;
+            color: #e67e22;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .announcement-banner { padding: 0.75rem 1rem; margin-bottom: 1rem; }
+            .announcement-banner h3 { font-size: 0.9rem; }
+            .announcement-banner p { font-size: 0.82rem; }
+        }
     </style>
 </head>
 <body>
@@ -981,6 +1022,8 @@
             </div>
         </header>
 
+        <div id="main-announcement"></div>
+
         <div class="courts-section">
             <h2 class="section-title">Available Courts</h2>
             <p class="section-subtitle">Book your court &mdash; ₱100 per hour</p>
@@ -998,6 +1041,8 @@
             </div>
         </header>
 
+        <div id="booking-announcement"></div>
+
         <div class="booking-wrap">
             <button class="back-btn" onclick="showMain()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1008,7 +1053,7 @@
                 <!-- LEFT -->
                 <div>
                     <div class="b-court-img">
-                        <svg id="b-court-svg" viewBox="0 0 380 260" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <svg id="b-court-svg" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg"></svg>
                     </div>
                     <h2 class="b-court-name" id="b-court-name"></h2>
                     <div class="b-loc">
@@ -1168,6 +1213,7 @@ const COURTS = [
     { id: 1, name: 'Court 1', zone: '#2E6DB4', kitchen: '#2E8B3A', surround: '#236B2E' },
     { id: 2, name: 'Court 2', zone: '#7B3FA0', kitchen: '#4A1A7A', surround: '#3A1560' },
     { id: 3, name: 'Court 3', zone: '#C0392B', kitchen: '#1A7A6A', surround: '#145A4C' },
+    { id: 4, name: 'Court 4', zone: '#D4A017', kitchen: '#8B6914', surround: '#6B5010' },
 ];
 
 const TIME_SLOTS = [
@@ -1195,6 +1241,7 @@ let realtimeChan  = null;
 let calMonth      = new Date().getMonth();
 let calYear       = new Date().getFullYear();
 let fullyBookedDates = new Set(); // dates where all slots are booked for current court
+let courtLocks = [];              // fetched from court_locks table
 
 // ── Unregister stale service workers from other projects ──
 if ('serviceWorker' in navigator) {
@@ -1203,8 +1250,67 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// ── Supabase REST helpers ─────────────────────────────
+const SUPABASE_URL = 'https://qzjaegutlsgtlaworbuy.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Hy_hFyt_cdZkGV74qjbHlQ_L_gA18rb';
+
+async function fetchAnnouncement() {
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/announcements?select=*&is_visible=eq.true&limit=1`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY } }
+        );
+        const data = await res.json();
+        const a = data[0];
+        const html = (a && a.is_visible && a.content)
+            ? `<div class="announcement-banner">
+                   ${a.title ? `<h3>${a.title}</h3>` : ''}
+                   <p>${a.content}</p>
+               </div>`
+            : '';
+        document.getElementById('main-announcement').innerHTML = html;
+        document.getElementById('booking-announcement').innerHTML = html;
+    } catch (e) {
+        console.error('Announcement fetch error:', e);
+    }
+}
+
+async function fetchCourtLocks() {
+    try {
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/court_locks?select=*&date=gte.${today}`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY } }
+        );
+        courtLocks = await res.json();
+    } catch (e) {
+        console.error('Court locks fetch error:', e);
+        courtLocks = [];
+    }
+}
+
+function isSlotLocked(slot) {
+    if (!curCourt || !selDate) return false;
+    return courtLocks.some(l =>
+        l.date === selDate &&
+        l.time_slot === slot &&
+        l.court_id === curCourt.id
+    );
+}
+
+function getSlotLockReason(slot) {
+    const lock = courtLocks.find(l =>
+        l.date === selDate &&
+        l.time_slot === slot &&
+        l.court_id === curCourt.id
+    );
+    return lock ? lock.reason : '';
+}
+
 // ── Loading Screen ────────────────────────────────────
 window.addEventListener('load', () => {
+    fetchAnnouncement();
+    fetchCourtLocks();
     setTimeout(() => {
         const ls = document.getElementById('loading-screen');
         ls.classList.add('hide');
@@ -1216,57 +1322,57 @@ window.addEventListener('load', () => {
     }, 2600);
 });
 
-// ── SVG court art (top-down pickleball court) ────────
+// ── SVG court art (vertical pickleball court) ────────
 function courtSVGContent(c, w, h) {
     // Surround padding
-    const pad = Math.round(h * 0.1);
+    const pad = Math.round(Math.min(w, h) * 0.08);
     const cx  = pad, cy = pad;
     const cw  = w - pad * 2, ch = h - pad * 2;
 
-    // Kitchen (center strip) is ~28% of court width
-    const kw  = Math.round(cw * 0.28);
-    const kx  = cx + Math.round((cw - kw) / 2);
+    // Kitchen (horizontal center strip) is ~28% of court height
+    const kh  = Math.round(ch * 0.28);
+    const ky  = cy + Math.round((ch - kh) / 2);
 
-    // Left & right zone widths
-    const lw  = kx - cx;
-    const rx  = kx + kw;
-    const rw  = (cx + cw) - rx;
+    // Top & bottom zone heights
+    const th  = ky - cy;
+    const by  = ky + kh;
+    const bh  = (cy + ch) - by;
 
-    // Horizontal mid-line y (splits each side in two)
-    const my  = cy + Math.round(ch / 2);
+    // Vertical mid-line x (splits each side in two)
+    const mx  = cx + Math.round(cw / 2);
 
-    // Dashed line cx
-    const dcx = kx + Math.round(kw / 2);
+    // Dashed center net line y
+    const dcy = ky + Math.round(kh / 2);
 
     return `
         <!-- surround -->
         <rect width="${w}" height="${h}" fill="${c.surround}"/>
 
-        <!-- left playing zone (2 quadrants) -->
-        <rect x="${cx}" y="${cy}" width="${lw}" height="${ch}" fill="${c.zone}"/>
+        <!-- top playing zone -->
+        <rect x="${cx}" y="${cy}" width="${cw}" height="${th}" fill="${c.zone}"/>
 
-        <!-- kitchen (center strip) -->
-        <rect x="${kx}" y="${cy}" width="${kw}" height="${ch}" fill="${c.kitchen}"/>
+        <!-- kitchen (horizontal center strip) -->
+        <rect x="${cx}" y="${ky}" width="${cw}" height="${kh}" fill="${c.kitchen}"/>
 
-        <!-- right playing zone (2 quadrants) -->
-        <rect x="${rx}" y="${cy}" width="${rw}" height="${ch}" fill="${c.zone}"/>
+        <!-- bottom playing zone -->
+        <rect x="${cx}" y="${by}" width="${cw}" height="${bh}" fill="${c.zone}"/>
 
         <!-- outer court border -->
         <rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"
               fill="none" stroke="white" stroke-width="2.5"/>
 
-        <!-- kitchen side lines -->
-        <line x1="${kx}" y1="${cy}" x2="${kx}" y2="${cy+ch}" stroke="white" stroke-width="2"/>
-        <line x1="${rx}" y1="${cy}" x2="${rx}" y2="${cy+ch}" stroke="white" stroke-width="2"/>
+        <!-- kitchen top & bottom lines -->
+        <line x1="${cx}" y1="${ky}" x2="${cx+cw}" y2="${ky}" stroke="white" stroke-width="2"/>
+        <line x1="${cx}" y1="${by}" x2="${cx+cw}" y2="${by}" stroke="white" stroke-width="2"/>
 
-        <!-- horizontal mid-line (left side) -->
-        <line x1="${cx}" y1="${my}" x2="${kx}" y2="${my}" stroke="white" stroke-width="2"/>
+        <!-- vertical mid-line (top side) -->
+        <line x1="${mx}" y1="${cy}" x2="${mx}" y2="${ky}" stroke="white" stroke-width="2"/>
 
-        <!-- horizontal mid-line (right side) -->
-        <line x1="${rx}" y1="${my}" x2="${cx+cw}" y2="${my}" stroke="white" stroke-width="2"/>
+        <!-- vertical mid-line (bottom side) -->
+        <line x1="${mx}" y1="${by}" x2="${mx}" y2="${cy+ch}" stroke="white" stroke-width="2"/>
 
-        <!-- dashed center net line -->
-        <line x1="${dcx}" y1="${cy}" x2="${dcx}" y2="${cy+ch}"
+        <!-- dashed center net line (horizontal) -->
+        <line x1="${cx}" y1="${dcy}" x2="${cx+cw}" y2="${dcy}"
               stroke="white" stroke-width="2.5"
               stroke-dasharray="10,8" stroke-linecap="round"/>
     `;
@@ -1278,8 +1384,8 @@ function renderCourts() {
     grid.innerHTML = COURTS.map(c => `
         <div class="court-card">
             <div class="court-img-wrap">
-                <svg viewBox="0 0 380 200" xmlns="http://www.w3.org/2000/svg">
-                    ${courtSVGContent(c, 380, 200)}
+                <svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                    ${courtSVGContent(c, 200, 280)}
                 </svg>
             </div>
             <div class="court-info">
@@ -1317,7 +1423,7 @@ function openBooking(courtId) {
     document.getElementById('b-court-name').textContent = curCourt.name;
 
     const svg = document.getElementById('b-court-svg');
-    svg.innerHTML = courtSVGContent(curCourt, 380, 260);
+    svg.innerHTML = courtSVGContent(curCourt, 200, 320);
 
     document.getElementById('main-page').style.display    = 'none';
     document.getElementById('booking-page').style.display = 'block';
@@ -1518,45 +1624,52 @@ function renderSlots() {
         return;
     }
 
-    // Check if the range has a booked slot inside it — clear if so
+    // Check if the range has a booked or locked slot inside it — clear if so
     for (let i = selStart; i <= selEnd; i++) {
-        if (i >= 0 && bookedSlots.has(TIME_SLOTS[i])) { selStart = -1; selEnd = -1; break; }
+        if (i >= 0 && (bookedSlots.has(TIME_SLOTS[i]) || isSlotLocked(TIME_SLOTS[i]))) { selStart = -1; selEnd = -1; break; }
     }
 
     grid.innerHTML = TIME_SLOTS.map((slot, idx) => {
         const booked = bookedSlots.has(slot);
+        const locked = isSlotLocked(slot);
+        const unavailable = booked || locked;
         const inSel  = selStart !== -1 && idx >= selStart && idx <= selEnd;
 
         // Dim non-adjacent slots when a selection exists
-        const blocked = !booked && selStart !== -1 && !inSel && !isAdjacentToSel(idx);
+        const blocked = !unavailable && selStart !== -1 && !inSel && !isAdjacentToSel(idx);
 
         let cls = 'slot';
         if (booked)  cls += ' slot-booked';
+        if (locked && !booked) cls += ' slot-locked';
         if (inSel)   cls += ' slot-sel';
         if (blocked) cls += ' slot-dim';
 
-        const click = (booked || blocked) ? '' : `onclick="toggleSlot(${idx})"`;
+        const click = (unavailable || blocked) ? '' : `onclick="toggleSlot(${idx})"`;
 
-        const statusIcon = booked
+        const statusIcon = unavailable
             ? `<span class="slot-status" style="color:#ef5350">✕</span>`
             : inSel
                 ? `<span class="slot-status" style="color:#4CAF50">✓</span>`
                 : `<span class="slot-status" style="color:#ccc">✓</span>`;
 
-        const bookedLbl = booked ? `<div class="slot-booked-lbl">Booked</div>` : '';
+        const statusLbl = booked
+            ? `<div class="slot-booked-lbl">Booked</div>`
+            : locked
+                ? `<div class="slot-locked-lbl" title="${getSlotLockReason(slot)}">Locked</div>`
+                : '';
 
         return `
             <div class="${cls}" ${click}>
                 <div class="slot-time">${slot}</div>
                 <div class="slot-price">₱100</div>
-                ${bookedLbl}
+                ${statusLbl}
                 ${statusIcon}
             </div>`;
     }).join('');
 }
 
 function toggleSlot(idx) {
-    if (bookedSlots.has(TIME_SLOTS[idx])) return;
+    if (bookedSlots.has(TIME_SLOTS[idx]) || isSlotLocked(TIME_SLOTS[idx])) return;
 
     if (selStart === -1) {
         // Start fresh selection
