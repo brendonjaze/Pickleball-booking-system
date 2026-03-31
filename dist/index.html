@@ -1428,6 +1428,7 @@ function openBooking(courtId) {
     document.getElementById('main-page').style.display    = 'none';
     document.getElementById('booking-page').style.display = 'block';
     window.scrollTo(0, 0);
+    history.pushState({ page: 'booking' }, '');
 
     renderCalendar();
     fetchAndSubscribe();
@@ -1441,6 +1442,12 @@ function showMain() {
     document.getElementById('booking-page').style.display = 'none';
     window.scrollTo(0, 0);
 }
+
+window.addEventListener('popstate', () => {
+    if (document.getElementById('booking-page').style.display === 'block') {
+        showMain();
+    }
+});
 
 // ── Supabase: fetch + real-time ───────────────────────
 async function fetchAndSubscribe() {
