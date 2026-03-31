@@ -965,13 +965,14 @@
         .announcement-banner h3 {
             color: #c0392b;
             margin: 0 0 0.35rem 0;
-            font-size: 1rem;
-            font-weight: 700;
+            font-size: 1.2rem;
+            font-weight: 800;
         }
         .announcement-banner p {
             color: #c0392b;
             margin: 0;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 600;
             line-height: 1.5;
         }
 
@@ -1833,10 +1834,11 @@ function renderStepContent() {
         setTimeout(() => document.getElementById('name-input')?.focus(), 50);
 
     } else if (wizardStep === 2) {
+        if (!bookingPayment) bookingPayment = 'GCash';
         body.innerHTML = `
             <p style="font-size:0.88rem;color:#555;margin-bottom:1rem;">Select your payment method:</p>
             <div class="pay-options">
-                ${[['💸','GCash'],['💵','Cash on Site']].map(([icon, label]) => `
+                ${[['💸','GCash'],['🏦','GoTyme'],['🏛️','Union Bank']].map(([icon, label]) => `
                     <div class="pay-option ${bookingPayment === label ? 'pay-sel' : ''}"
                          onclick="bookingPayment='${label}'; renderWizard()">
                         <span class="pay-icon">${icon}</span> ${label}
@@ -1858,20 +1860,44 @@ function renderStepContent() {
                 ${label}
             </button>`;
 
-        const isGcash = bookingPayment === 'GCash';
-        body.innerHTML = isGcash ? `
+        const qrImages = {
+            'GCash': `<img src="qr-gcash.png" alt="GCash QR Code" style="width:180px;height:180px;object-fit:contain;display:block;"/>`,
+            'GoTyme': `<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+                <rect width="180" height="180" fill="#fff"/>
+                <rect x="10" y="10" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="20" y="20" width="30" height="30" rx="2" fill="#222"/>
+                <rect x="120" y="10" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="130" y="20" width="30" height="30" rx="2" fill="#222"/>
+                <rect x="10" y="120" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="20" y="130" width="30" height="30" rx="2" fill="#222"/>
+                <text x="90" y="95" text-anchor="middle" font-size="11" font-weight="700" fill="#555" font-family="sans-serif">GoTyme QR</text>
+                <text x="90" y="112" text-anchor="middle" font-size="9" fill="#999" font-family="sans-serif">(Coming Soon)</text>
+            </svg>`,
+            'Union Bank': `<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+                <rect width="180" height="180" fill="#fff"/>
+                <rect x="10" y="10" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="20" y="20" width="30" height="30" rx="2" fill="#222"/>
+                <rect x="120" y="10" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="130" y="20" width="30" height="30" rx="2" fill="#222"/>
+                <rect x="10" y="120" width="50" height="50" rx="4" fill="none" stroke="#222" stroke-width="4"/>
+                <rect x="20" y="130" width="30" height="30" rx="2" fill="#222"/>
+                <text x="90" y="95" text-anchor="middle" font-size="11" font-weight="700" fill="#555" font-family="sans-serif">Union Bank QR</text>
+                <text x="90" y="112" text-anchor="middle" font-size="9" fill="#999" font-family="sans-serif">(Coming Soon)</text>
+            </svg>`
+        };
+
+        body.innerHTML = `
             <div style="text-align:center;margin-bottom:1rem;">
                 <p style="font-size:0.88rem;color:#555;margin-bottom:0.75rem;">
-                    Scan the QR code below to pay via <strong>GCash</strong>
+                    Scan the QR code below to pay via <strong>${bookingPayment}</strong>
                 </p>
                 <div style="display:inline-block;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;margin-bottom:0.65rem;">
                     <div id="qr-svg-wrap">
-                        <img src="qr-gcash.png" alt="GCash QR Code"
-                             style="width:180px;height:180px;object-fit:contain;display:block;"/>
+                        ${qrImages[bookingPayment]}
                     </div>
                 </div>
                 <br>
-                <button onclick="downloadQR()" style="
+                ${bookingPayment === 'GCash' ? `<button onclick="downloadQR()" style="
                     display:inline-flex;align-items:center;gap:0.4rem;
                     background:none;border:1.5px solid var(--green-dark);
                     color:var(--green-dark);border-radius:8px;
@@ -1880,13 +1906,13 @@ function renderStepContent() {
                     margin-bottom:0.75rem;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Download QR Code
-                </button>
+                </button>` : ''}
                 <div style="font-size:1.5rem;font-weight:800;color:var(--green-dark);margin-bottom:0.2rem;">₱${amount.toLocaleString()}</div>
                 <div style="font-size:0.8rem;color:#888;margin-bottom:0.5rem;">Amount to pay</div>
                 ${dlBtn('Download Backup Receipt')}
             </div>
             <div class="receipt-upload" id="receipt-upload-wrap">
-                <label class="receipt-label">Upload GCash Payment Screenshot</label>
+                <label class="receipt-label">Upload ${bookingPayment} Payment Screenshot</label>
                 <div class="receipt-drop" onclick="document.getElementById('receipt-file').click()">
                     <div id="receipt-preview-wrap">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1896,19 +1922,6 @@ function renderStepContent() {
                 <input type="file" id="receipt-file" accept="image/*" style="display:none"
                        onchange="handleReceiptUpload(this)"/>
                 <div class="receipt-hint">JPG, PNG accepted</div>
-            </div>` : `
-            <div style="text-align:center;padding:1rem 0 0.5rem;">
-                <div style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin-bottom:0.4rem;">Pay at the Counter</div>
-                <div style="font-size:0.88rem;color:#777;line-height:1.6;margin-bottom:1rem;">
-                    Please pay <strong style="color:var(--green-dark)">₱${amount.toLocaleString()}</strong> upon arrival.<br>
-                    Show your receipt to the facility staff.
-                </div>
-                <div style="background:#f0faf4;border:1px solid #b2dfca;border-radius:10px;padding:1rem;font-size:0.85rem;color:#333;text-align:left;margin-bottom:0.25rem;">
-                    <strong>${curCourt.name}</strong><br>
-                    ${shortDate(selDate)} &bull; ${timeStr}<br>
-                    ${n} hour${n>1?'s':''} &bull; ${bookingName} &bull; Contact: ${bookingPhone}
-                </div>
-                ${dlBtn('Download Receipt')}
             </div>`;
     }
 }
@@ -1930,8 +1943,6 @@ function downloadReceipt() {
     const timeStr = slotRangeLabel(slots);
     const dateStr = formatDate(selDate);
     const ref     = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
-    const isGcash = bookingPayment === 'GCash';
-
     const W = 600, pad = 40;
     const canvas = document.createElement('canvas');
     const ctx    = canvas.getContext('2d');
@@ -1979,14 +1990,14 @@ function downloadReceipt() {
 
     // Status badge
     const badgeY = 110;
-    ctx.fillStyle = isGcash ? '#e8f5e9' : '#fff8e1';
+    ctx.fillStyle = '#e8f5e9';
     ctx.beginPath();
-    ctx.roundRect(W/2 - 90, badgeY - 18, 180, 32, 16);
+    ctx.roundRect(W/2 - 110, badgeY - 18, 220, 32, 16);
     ctx.fill();
-    ctx.fillStyle = isGcash ? '#1e5c45' : '#e65100';
+    ctx.fillStyle = '#1e5c45';
     ctx.font      = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(isGcash ? '✓  PAID VIA GCASH' : '⏳  PAY ON ARRIVAL', W/2, badgeY + 6);
+    ctx.fillText('✓  PAID VIA ' + bookingPayment.toUpperCase(), W/2, badgeY + 6);
 
     // Reference
     ctx.fillStyle = '#aaa';
@@ -2090,8 +2101,7 @@ function renderWizardFooter() {
 
     if (wizardStep === 3) {
         next.textContent = 'Done';
-        // GCash requires receipt upload; Cash on Site does not
-        next.disabled = bookingPayment === 'GCash' && !receiptFile;
+        next.disabled = !receiptFile;
     } else {
         next.innerHTML = 'Next &#8594;';
         if (wizardStep === 1)      next.disabled = bookingName.length < 2 || bookingPhone.length < 10;
