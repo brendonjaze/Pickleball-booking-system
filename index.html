@@ -2163,7 +2163,7 @@ async function finishBooking() {
             console.error('Receipt upload failed:', e);
             next.disabled    = false;
             next.textContent = 'Done';
-            alert('Receipt upload failed. Please check your internet and try again.');
+            alert('Receipt upload failed: ' + e.message);
             return;
         }
     }
