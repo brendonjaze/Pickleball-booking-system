@@ -1217,7 +1217,6 @@ async function uploadReceiptToImgBB(file) {
                 const form   = new FormData();
                 form.append('key',        IMGBB_API_KEY);
                 form.append('image',      base64);
-                form.append('expiration', '604800'); // 7 days in seconds
 
                 const res  = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
                 const json = await res.json();
