@@ -1205,6 +1205,32 @@ const db = createClient(
     'sb_publishable_Hy_hFyt_cdZkGV74qjbHlQ_L_gA18rb'
 );
 
+// ── ImgBB ─────────────────────────────────────────────
+const IMGBB_API_KEY = '8fc14102ba08a088e07b3197003f5fe5';
+
+async function uploadReceiptToImgBB(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+            try {
+                const base64 = reader.result.split(',')[1];
+                const form   = new FormData();
+                form.append('key',        IMGBB_API_KEY);
+                form.append('image',      base64);
+                form.append('expiration', '604800'); // 7 days in seconds
+
+                const res  = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
+                const json = await res.json();
+
+                if (json.success) resolve(json.data.url);
+                else reject(new Error(json.error?.message || 'ImgBB upload failed'));
+            } catch (e) { reject(e); }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
+
 // ── Data ──────────────────────────────────────────────
 // zone: playing area color | kitchen: center strip color | surround: outer color
 const COURTS = [
@@ -2102,19 +2128,37 @@ function wizardPrev() {
 async function finishBooking() {
     const slots = getSelSlotRange();
     const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
-    const rows  = slots.map(slot => ({
+
+    const next = document.getElementById('btn-next');
+    next.disabled    = true;
+    next.textContent = 'Uploading receipt…';
+
+    // Upload receipt to ImgBB first
+    let receiptUrl = null;
+    if (receiptFile) {
+        try {
+            receiptUrl = await uploadReceiptToImgBB(receiptFile);
+        } catch (e) {
+            console.error('Receipt upload failed:', e);
+            next.disabled    = false;
+            next.textContent = 'Done';
+            alert('Receipt upload failed. Please check your internet and try again.');
+            return;
+        }
+    }
+
+    next.textContent = 'Saving…';
+
+    const rows = slots.map(slot => ({
         court_id:       curCourt.id,
         date:           selDate,
         time_slot:      slot,
         name:           bookingName,
         phone:          bookingPhone,
         payment_method: bookingPayment,
-        booking_ref:    bookingRef
+        booking_ref:    bookingRef,
+        receipt_url:    receiptUrl
     }));
-
-    const next = document.getElementById('btn-next');
-    next.disabled    = true;
-    next.textContent = 'Saving…';
 
     const { error } = await db.from('bookings').insert(rows);
 
