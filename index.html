@@ -1568,7 +1568,7 @@ function renderCourts() {
                 ${courtTodayStatus[c.id] ? `
                 <div class="court-avail-badge ${courtTodayStatus[c.id]}">
                     <span class="court-avail-badge-dot"></span>
-                    ${courtTodayStatus[c.id] === 'available' ? 'Available Today' : 'Fully Booked Today'}
+                    ${courtTodayStatus[c.id] === 'available' ? 'Available Today' : 'Unavailable Today'}
                 </div>` : ''}
                 <div class="court-loc">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
