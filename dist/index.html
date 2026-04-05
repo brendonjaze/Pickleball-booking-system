@@ -989,6 +989,90 @@
             margin-top: 2px;
         }
 
+        /* ── Feature 1: Slot legend ── */
+        .slot-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+            padding: 0.65rem 0.85rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+        }
+        .slot-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.73rem;
+            font-weight: 600;
+            color: #444;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 999px;
+            padding: 0.25rem 0.7rem 0.25rem 0.45rem;
+        }
+        .sl-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .sl-available { background: #c8e6c9; border: 1.5px solid #81c784; }
+        .sl-selected  { background: #1e5c45;  border: 1.5px solid #1e5c45; }
+        .sl-booked    { background: #bdbdbd;  border: 1.5px solid #9e9e9e; }
+        .sl-locked    { background: #ffb74d;  border: 1.5px solid #e67e22; }
+
+        /* ── Feature 4: Court availability badge ── */
+        .court-avail-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.73rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            padding: 0.32rem 0.85rem 0.32rem 0.65rem;
+            border-radius: 999px;
+            margin-bottom: 0.8rem;
+            width: fit-content;
+        }
+        .court-avail-badge.available {
+            background: #d6f0da;
+            color: #1b5e20;
+            border: 1.5px solid #a5d6a7;
+        }
+        .court-avail-badge.full {
+            background: #fdecea;
+            color: #b71c1c;
+            border: 1.5px solid #ef9a9a;
+        }
+        .court-avail-badge-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .available .court-avail-badge-dot {
+            background: #2e7d32;
+            box-shadow: 0 0 0 2px rgba(46,125,50,0.25);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        .full .court-avail-badge-dot {
+            background: #c62828;
+            box-shadow: 0 0 0 2px rgba(198,40,40,0.2);
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(46,125,50,0.25); }
+            50%       { box-shadow: 0 0 0 4px rgba(46,125,50,0.1); }
+        }
+
+        /* ── Feature 5: Slot flash animation ── */
+        @keyframes slot-flash {
+            0%   { box-shadow: 0 0 0 3px rgba(255,160,0,0.7); }
+            60%  { box-shadow: 0 0 0 6px rgba(255,160,0,0); }
+            100% { box-shadow: none; }
+        }
+        .slot-flash { animation: slot-flash 0.7s ease-out; }
+
         @media (max-width: 600px) {
             .announcement-banner { padding: 0.75rem 1rem; margin-bottom: 1rem; }
             .announcement-banner h3 { font-size: 0.9rem; }
@@ -1100,6 +1184,12 @@
                         </p>
                     </div>
                     <div class="slots-grid" id="slots-grid"></div>
+                    <div class="slot-legend">
+                        <div class="slot-legend-item"><span class="sl-dot sl-available"></span>Available</div>
+                        <div class="slot-legend-item"><span class="sl-dot sl-selected"></span>Selected</div>
+                        <div class="slot-legend-item"><span class="sl-dot sl-booked"></span>Booked</div>
+                        <div class="slot-legend-item"><span class="sl-dot sl-locked"></span>Locked</div>
+                    </div>
 
                     <!-- Booking summary strip -->
                     <div class="booking-summary-strip" id="bss">
@@ -1284,6 +1374,7 @@ let calMonth      = new Date().getMonth();
 let calYear       = new Date().getFullYear();
 let fullyBookedDates = new Set(); // dates where all slots are booked for current court
 let courtLocks = [];              // fetched from court_locks table
+let courtTodayStatus = {};        // court_id → 'available' | 'full'
 
 // ── Unregister stale service workers from other projects ──
 if ('serviceWorker' in navigator) {
@@ -1341,6 +1432,38 @@ async function fetchCourtLocks() {
     }
 }
 
+async function fetchTodayAvailability() {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+        const { data, error } = await db
+            .from('bookings')
+            .select('court_id, time_slot')
+            .eq('date', today);
+        if (error) return;
+        COURTS.forEach(c => {
+            const booked = new Set(data.filter(b => b.court_id === c.id).map(b => b.time_slot));
+            const locked = new Set(courtLocks
+                .filter(l => l.court_id === c.id && l.date === today)
+                .map(l => l.time_slot));
+            const unavailable = new Set([...booked, ...locked]);
+            courtTodayStatus[c.id] = TIME_SLOTS.some(s => !unavailable.has(s)) ? 'available' : 'full';
+        });
+        renderCourts();
+    } catch (e) { /* silently skip badge */ }
+}
+
+function flashSlot(slot) {
+    const idx = TIME_SLOTS.indexOf(slot);
+    if (idx === -1) return;
+    const el = document.querySelectorAll('#slots-grid .slot')[idx];
+    if (el) {
+        el.classList.remove('slot-flash');
+        void el.offsetWidth;
+        el.classList.add('slot-flash');
+        el.addEventListener('animationend', () => el.classList.remove('slot-flash'), { once: true });
+    }
+}
+
 function isSlotLocked(slot) {
     if (!curCourt || !selDate) return false;
     return courtLocks.some(l =>
@@ -1362,7 +1485,7 @@ function getSlotLockReason(slot) {
 // ── Loading Screen ────────────────────────────────────
 window.addEventListener('load', () => {
     fetchAnnouncement();
-    fetchCourtLocks();
+    fetchCourtLocks().then(() => fetchTodayAvailability());
     setTimeout(() => {
         const ls = document.getElementById('loading-screen');
         ls.classList.add('hide');
@@ -1442,6 +1565,11 @@ function renderCourts() {
             </div>
             <div class="court-info">
                 <div class="court-name">${c.name}</div>
+                ${courtTodayStatus[c.id] ? `
+                <div class="court-avail-badge ${courtTodayStatus[c.id]}">
+                    <span class="court-avail-badge-dot"></span>
+                    ${courtTodayStatus[c.id] === 'available' ? 'Available Today' : 'Fully Booked Today'}
+                </div>` : ''}
                 <div class="court-loc">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
@@ -1556,6 +1684,7 @@ function subscribeRealtime() {
                 if (wasSelected) { selStart = -1; selEnd = -1; }
                 showSlotTakenToast(time_slot, wasSelected);
                 renderSlots();
+                flashSlot(time_slot);
                 updateConfirm();
             }
         })
@@ -1564,8 +1693,10 @@ function subscribeRealtime() {
             schema: 'public',
             table: 'court_locks'
         }, payload => {
-            courtLocks.push(normalizeLock(payload.new));
+            const lock = normalizeLock(payload.new);
+            courtLocks.push(lock);
             renderSlots();
+            if (lock.date === selDate && lock.court_id === curCourt.id) flashSlot(lock.time_slot);
             updateConfirm();
         })
         .on('postgres_changes', {
@@ -1573,8 +1704,10 @@ function subscribeRealtime() {
             schema: 'public',
             table: 'court_locks'
         }, payload => {
+            const removed = courtLocks.find(l => l.id === payload.old.id);
             courtLocks = courtLocks.filter(l => l.id !== payload.old.id);
             renderSlots();
+            if (removed && removed.date === selDate && removed.court_id === curCourt.id) flashSlot(removed.time_slot);
             updateConfirm();
         })
         .on('postgres_changes', {
@@ -1582,10 +1715,12 @@ function subscribeRealtime() {
             schema: 'public',
             table: 'court_locks'
         }, payload => {
-            const i = courtLocks.findIndex(l => l.id === payload.new.id);
-            if (i !== -1) courtLocks[i] = normalizeLock(payload.new);
-            else courtLocks.push(normalizeLock(payload.new));
+            const lock = normalizeLock(payload.new);
+            const i = courtLocks.findIndex(l => l.id === lock.id);
+            if (i !== -1) courtLocks[i] = lock;
+            else courtLocks.push(lock);
             renderSlots();
+            if (lock.date === selDate && lock.court_id === curCourt.id) flashSlot(lock.time_slot);
             updateConfirm();
         })
         .subscribe();
@@ -1796,7 +1931,7 @@ function updateConfirm() {
         btn.textContent = `Confirm Booking — ₱${amount.toLocaleString()}`;
 
         document.getElementById('bss-date').textContent   = dateStr;
-        document.getElementById('bss-time').textContent   = timeStr;
+        document.getElementById('bss-time').textContent   = `${timeStr} (${n} hr${n > 1 ? 's' : ''})`;
         document.getElementById('bss-total').textContent  = `₱${amount.toFixed(2)}`;
         bss.style.display = 'block';
     } else {
@@ -2207,6 +2342,39 @@ async function finishBooking() {
             alert('Receipt upload failed: ' + e.message);
             return;
         }
+    }
+
+    next.textContent = 'Checking availability…';
+
+    // Server-side lock check — query court_locks for any matching slots right before insert
+    const { data: lockedRows, error: lockCheckError } = await db
+        .from('court_locks')
+        .select('time_slot')
+        .eq('court_id', curCourt.id)
+        .eq('date', selDate)
+        .in('time_slot', slots);
+
+    if (lockCheckError) {
+        console.error('Lock check error:', lockCheckError);
+        next.disabled    = false;
+        next.textContent = 'Done';
+        alert('Could not verify slot availability. Please try again.');
+        return;
+    }
+
+    if (lockedRows && lockedRows.length > 0) {
+        next.disabled    = false;
+        next.textContent = 'Done';
+        closeModal();
+        await fetchBookedSlots();
+        await fetchCourtLocks();
+        selStart = -1; selEnd = -1;
+        renderSlots();
+        updateConfirm();
+        document.getElementById('conflict-msg').innerHTML =
+            'Sorry, one or more of your selected time slots are no longer available.<br><br>Please select a different time.';
+        document.getElementById('conflict-modal').classList.add('show');
+        return;
     }
 
     next.textContent = 'Saving…';
