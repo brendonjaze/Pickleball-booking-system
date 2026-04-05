@@ -1320,6 +1320,15 @@ async function fetchAnnouncement() {
     }
 }
 
+function normalizeLock(l) {
+    return {
+        ...l,
+        time_slot: typeof l.time_slot === 'string'
+            ? l.time_slot.replace(/[\u2014\u2012\u2212\u002D]/g, '\u2013').replace(/\s+/g, ' ').trim()
+            : l.time_slot
+    };
+}
+
 async function fetchCourtLocks() {
     try {
         const today = new Date().toISOString().slice(0, 10);
@@ -1327,7 +1336,8 @@ async function fetchCourtLocks() {
             `${SUPABASE_URL}/rest/v1/court_locks?select=*&date=gte.${today}`,
             { headers: { 'apikey': SUPABASE_ANON_KEY } }
         );
-        courtLocks = await res.json();
+        const raw = await res.json();
+        courtLocks = Array.isArray(raw) ? raw.map(normalizeLock) : [];
     } catch (e) {
         console.error('Court locks fetch error:', e);
         courtLocks = [];
@@ -1551,6 +1561,35 @@ function subscribeRealtime() {
                 renderSlots();
                 updateConfirm();
             }
+        })
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'court_locks'
+        }, payload => {
+            courtLocks.push(normalizeLock(payload.new));
+            renderSlots();
+            updateConfirm();
+        })
+        .on('postgres_changes', {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'court_locks'
+        }, payload => {
+            courtLocks = courtLocks.filter(l => l.id !== payload.old.id);
+            renderSlots();
+            updateConfirm();
+        })
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'court_locks'
+        }, payload => {
+            const i = courtLocks.findIndex(l => l.id === payload.new.id);
+            if (i !== -1) courtLocks[i] = normalizeLock(payload.new);
+            else courtLocks.push(normalizeLock(payload.new));
+            renderSlots();
+            updateConfirm();
         })
         .subscribe();
 }
