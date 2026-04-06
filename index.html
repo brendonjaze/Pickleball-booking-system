@@ -45,8 +45,10 @@
             inset: 0;
             background-color: var(--cream);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 2rem;
             z-index: 999;
             transition: opacity 0.6s ease;
         }
@@ -59,6 +61,22 @@
         .loading-logo {
             text-align: center;
             animation: logoFadeIn 1.2s ease forwards;
+        }
+
+        #flying-logo {
+            display: block;
+            width: min(500px, 75vw);
+            height: auto;
+            margin: 0 auto 1.5rem;
+            object-fit: contain;
+            opacity: 0;
+            animation: flyingLogoFadeIn 1.2s ease forwards;
+            pointer-events: none;
+        }
+
+        @keyframes flyingLogoFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
 
         .loading-glan {
@@ -123,6 +141,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+
+        .header-img-logo {
+            position: absolute;
+            left: 2rem;
+            height: 42px;
+            width: auto;
+            object-fit: contain;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .header-logo { text-align: center; color: var(--cream); line-height: 1; }
@@ -835,6 +864,10 @@
             .booking-wrap { padding: 1.25rem 1.25rem 3rem; }
 
             .modal { max-width: 100%; border-radius: 16px; }
+
+            /* Logo — tablet */
+            #loading-screen { gap: 1.5rem; }
+            #flying-logo { width: min(360px, 68vw); }
         }
 
         /* ══════════════════════════════════════
@@ -843,12 +876,15 @@
         @media (max-width: 600px) {
 
             /* Loading */
+            #loading-screen { gap: 1.25rem; }
+            #flying-logo { width: min(240px, 65vw); }
             .loading-glan       { font-size: 2.2rem; }
             .loading-pickleball { font-size: 4rem; }
             .loading-community  { font-size: 0.65rem; letter-spacing: 0.4em; }
 
             /* Header */
             .header { padding: 0.75rem 1rem; }
+            .header-img-logo { left: 1rem; height: 34px; }
             .header-logo .h-glan   { font-size: 1rem; }
             .header-logo .h-pickle { font-size: 1.5rem; }
             .header-logo .h-comm   { font-size: 0.45rem; }
@@ -950,6 +986,11 @@
             .slots-grid { grid-template-columns: 1fr; }
             .cal-d { width: 26px; height: 26px; font-size: 0.72rem; }
             .step-label { display: none; }
+
+            /* Logo — extra small */
+            #loading-screen { gap: 1rem; }
+            #flying-logo { width: min(180px, 68vw); }
+            .header-img-logo { height: 28px; }
         }
 
         /* ══════════════════════════════════════
@@ -1084,6 +1125,7 @@
 
 <!-- ══════════════════ LOADING SCREEN ══════════════════ -->
 <div id="loading-screen">
+    <img id="flying-logo" src="BMJ COURT PICKLEBALL - PRIMARY LOGO.png" alt="Glan Pickleball Logo">
     <div class="loading-logo">
         <span class="loading-glan">GLAN</span>
         <span class="loading-pickleball">Pickleball</span>
@@ -1100,6 +1142,7 @@
     <!-- ── MAIN PAGE ── -->
     <div id="main-page">
         <header class="header">
+            <img src="BMJ COURT PICKLEBALL - PRIMARY LOGO.png" alt="Glan Pickleball Logo" class="header-img-logo">
             <div class="header-logo">
                 <span class="h-glan">GLAN</span>
                 <span class="h-pickle">Pickleball</span>
@@ -1119,6 +1162,7 @@
     <!-- ── BOOKING PAGE ── -->
     <div id="booking-page">
         <header class="header">
+            <img src="BMJ COURT PICKLEBALL - PRIMARY LOGO.png" alt="Glan Pickleball Logo" class="header-img-logo">
             <div class="header-logo">
                 <span class="h-glan">GLAN</span>
                 <span class="h-pickle">Pickleball</span>
@@ -1486,14 +1530,58 @@ function getSlotLockReason(slot) {
 window.addEventListener('load', () => {
     fetchAnnouncement();
     fetchCourtLocks().then(() => fetchTodayAvailability());
+
+    // Show app behind the loading screen so we can measure header position
+    document.getElementById('app').style.display = 'block';
+    renderCourts();
+
     setTimeout(() => {
-        const ls = document.getElementById('loading-screen');
+        const ls          = document.getElementById('loading-screen');
+        const flyingLogo  = document.getElementById('flying-logo');
+        const headerLogo  = document.querySelector('#main-page .header-img-logo');
+        const rect        = headerLogo.getBoundingClientRect();
+
+        // Capture logo's current in-flow position before anything moves
+        const logoRect = flyingLogo.getBoundingClientRect();
+
+        // Snap to fixed at the exact same visual position (no jump)
+        flyingLogo.style.position  = 'fixed';
+        flyingLogo.style.top       = logoRect.top + 'px';
+        flyingLogo.style.left      = logoRect.left + 'px';
+        flyingLogo.style.width     = logoRect.width + 'px';
+        flyingLogo.style.margin    = '0';
+        flyingLogo.style.zIndex    = '1000';
+        flyingLogo.style.transform = 'none';
+
+        // Move logo out of loading screen so the parent fade doesn't affect it
+        document.body.appendChild(flyingLogo);
+
+        // Force reflow so the browser registers the starting position
+        flyingLogo.getBoundingClientRect();
+
+        // Fade out loading screen
         ls.classList.add('hide');
+
+        // Now animate to header top-left
+        requestAnimationFrame(() => {
+            flyingLogo.style.transition = [
+                'width 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                'top 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                'left 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                'transform 1.6s cubic-bezier(0.4, 0, 0.2, 1)'
+            ].join(', ');
+            flyingLogo.style.width     = rect.width + 'px';
+            flyingLogo.style.top       = (rect.top + rect.height / 2) + 'px';
+            flyingLogo.style.left      = rect.left + 'px';
+            flyingLogo.style.transform = 'translateY(-50%)';
+        });
+
+        // Once the logo lands, reveal header logos and clean up
         setTimeout(() => {
+            document.querySelectorAll('.header-img-logo').forEach(el => el.style.opacity = '1');
+            flyingLogo.style.display = 'none';
             ls.style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            renderCourts();
-        }, 620);
+        }, 1700);
     }, 2600);
 });
 
