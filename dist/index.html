@@ -1205,9 +1205,9 @@
 
                     <div class="calendar-box">
                         <div class="cal-header">
-                            <button class="cal-nav" onclick="prevMonth()">&#8249;</button>
+                            <button class="cal-nav" id="cal-prev" onclick="prevMonth()">&#8249;</button>
                             <span class="cal-month-label" id="cal-label"></span>
-                            <button class="cal-nav" onclick="nextMonth()">&#8250;</button>
+                            <button class="cal-nav" id="cal-next" onclick="nextMonth()">&#8250;</button>
                         </div>
                         <div class="cal-grid" id="cal-grid"></div>
                         <div class="cal-legend">
@@ -1852,8 +1852,24 @@ async function fetchFullyBookedDates() {
 }
 
 // ── Calendar ──────────────────────────────────────────
+function getBookableRange() {
+    const today = new Date();
+    const minMonth = today.getMonth();
+    const minYear  = today.getFullYear();
+    let maxMonth   = minMonth + (today.getDate() >= 15 ? 1 : 0);
+    let maxYear    = minYear  + (maxMonth > 11 ? 1 : 0);
+    maxMonth       = maxMonth % 12;
+    return { minMonth, minYear, maxMonth, maxYear };
+}
+
 function renderCalendar() {
     document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+    const { minMonth, minYear, maxMonth, maxYear } = getBookableRange();
+    const prevBtn = document.getElementById('cal-prev');
+    const nextBtn = document.getElementById('cal-next');
+    if (prevBtn) prevBtn.style.visibility = (calYear === minYear && calMonth === minMonth) ? 'hidden' : 'visible';
+    if (nextBtn) nextBtn.style.visibility = (calYear === maxYear && calMonth === maxMonth) ? 'hidden' : 'visible';
 
     const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
     const firstDay      = new Date(calYear, calMonth, 1).getDay();
@@ -1899,12 +1915,16 @@ function pickDate(str) {
 }
 
 function prevMonth() {
+    const { minMonth, minYear } = getBookableRange();
+    if (calYear === minYear && calMonth === minMonth) return;
     calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
     renderCalendar();
     fetchFullyBookedDates();
 }
 
 function nextMonth() {
+    const { maxMonth, maxYear } = getBookableRange();
+    if (calYear === maxYear && calMonth === maxMonth) return;
     calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
     renderCalendar();
     fetchFullyBookedDates();
