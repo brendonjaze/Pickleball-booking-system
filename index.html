@@ -25,6 +25,8 @@
             --green-dark: #0e7490;
             --green-medium: #0891b2;
             --green-light: #cffafe;
+            --pink: #e4189a;
+            --pink-light: #fce7f3;
             --white: #ffffff;
             --gray: #666;
             --light-gray: #f0f0f0;
@@ -116,7 +118,7 @@
         .loading-bar {
             height: 100%;
             width: 0%;
-            background: var(--green-dark);
+            background: linear-gradient(90deg, #0e7490, #0891b2, #e4189a);
             border-radius: 99px;
             animation: loadBar 2.2s ease forwards 0.3s;
         }
@@ -210,7 +212,7 @@
             font-size: 0.73rem;
             font-weight: 600;
         }
-        .court-price { font-size: 1.25rem; font-weight: 700; color: var(--green-dark); }
+        .court-price { font-size: 1.25rem; font-weight: 700; color: var(--pink); }
 
         .book-btn {
             width: 100%;
@@ -478,7 +480,7 @@
         .confirm-btn {
             width: 100%;
             padding: 1rem;
-            background-color: var(--green-dark);
+            background: linear-gradient(135deg, #0e7490, #e4189a);
             color: var(--white);
             border: none;
             border-radius: 12px;
@@ -487,10 +489,10 @@
             cursor: pointer;
             font-family: 'Montserrat', sans-serif;
             letter-spacing: 0.04em;
-            transition: background-color 0.18s;
+            transition: opacity 0.18s;
         }
 
-        .confirm-btn:hover:not(:disabled) { background-color: var(--green-medium); }
+        .confirm-btn:hover:not(:disabled) { opacity: 0.88; }
         .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
 
         /* ─── Booking summary strip (above confirm btn) ─── */
@@ -679,7 +681,7 @@
         }
 
         .m-total-amount {
-            font-size: 1.6rem; font-weight: 800; color: var(--green-dark);
+            font-size: 1.6rem; font-weight: 800; color: var(--pink);
         }
 
         /* Phone step */
@@ -833,13 +835,13 @@
             gap: 0.35rem;
             font-size: 0.72rem;
             font-weight: 600;
-            color: #4CAF50;
+            color: var(--pink);
             margin-left: 0.5rem;
         }
 
         .live-dot {
             width: 7px; height: 7px;
-            background: #4CAF50;
+            background: var(--pink);
             border-radius: 50%;
             animation: pulse 1.4s ease infinite;
         }
