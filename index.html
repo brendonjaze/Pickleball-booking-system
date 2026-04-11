@@ -1156,7 +1156,7 @@
 
         <div class="courts-section">
             <h2 class="section-title">Available Courts</h2>
-            <p class="section-subtitle">Book your court &mdash; ₱100 per hour</p>
+            <p class="section-subtitle">Book your court and enjoy the game</p>
             <div class="courts-grid" id="courts-grid"></div>
         </div>
     </div>
@@ -1194,7 +1194,7 @@
                     <div class="b-info-section">
                         <div class="b-info-row">
                             <span class="b-info-label">Court Information</span>
-                            <span class="b-price">₱100/hour</span>
+                            <span class="b-price" id="b-price">₱100/hour</span>
                         </div>
                         <div class="court-tags" id="b-court-tags"></div>
                     </div>
@@ -1390,13 +1390,36 @@ async function uploadReceiptToImgBB(file) {
 }
 
 // ── Data ──────────────────────────────────────────────
-// zone: playing area color | kitchen: center strip color | surround: outer color
-const COURTS = [
-    { id: 1, name: 'Court 1', zone: '#2E6DB4', kitchen: '#2E8B3A', surround: '#236B2E', tags: ['Pickleball', 'Outdoor'] },
-    { id: 2, name: 'Court 2', zone: '#7B3FA0', kitchen: '#E05C1A', surround: '#1A7A5A', tags: ['Pickleball', 'Indoor'] },
-    { id: 3, name: 'Court 3', zone: '#C0392B', kitchen: '#1A7A6A', surround: '#145A4C', tags: ['Pickleball', 'Indoor'] },
-    { id: 4, name: 'Court 4', zone: '#D4A017', kitchen: '#1A6BB4', surround: '#B03060', tags: ['Pickleball', 'Indoor'] },
+// zone: playing area | kitchen: center strip | surround: outer border
+// Colors auto-assigned by index from COURT_PALETTE
+const COURT_PALETTE = [
+    { zone: '#4a90d9', kitchen: '#27ae60', surround: '#1a6ba8' },
+    { zone: '#7b4ea6', kitchen: '#e67e22', surround: '#5a3a7a' },
+    { zone: '#c0392b', kitchen: '#16a085', surround: '#8e2015' },
+    { zone: '#27ae60', kitchen: '#2980b9', surround: '#1a7a43' },
+    { zone: '#e67e22', kitchen: '#8e44ad', surround: '#b85f10' },
 ];
+let COURTS = [];
+
+async function fetchCourts() {
+    const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/courts?select=*&is_active=eq.true&order=sort_order.asc`,
+        { headers: { 'apikey': SUPABASE_ANON_KEY } }
+    );
+    const data = await res.json();
+    COURTS = data.map((row, i) => {
+        const colors = COURT_PALETTE[i % COURT_PALETTE.length];
+        return {
+            id:             row.id,
+            name:           row.name,
+            price_per_hour: row.price_per_hour,
+            tags:           ['Pickleball', row.type],
+            zone:           colors.zone,
+            kitchen:        colors.kitchen,
+            surround:       colors.surround,
+        };
+    });
+}
 
 const TIME_SLOTS = [
     '1:00 PM – 2:00 PM',  '2:00 PM – 3:00 PM',
@@ -1529,8 +1552,9 @@ function getSlotLockReason(slot) {
 }
 
 // ── Loading Screen ────────────────────────────────────
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     fetchAnnouncement();
+    await fetchCourts();
     fetchCourtLocks().then(() => fetchTodayAvailability());
 
     // Show app behind the loading screen so we can measure header position
@@ -1671,7 +1695,7 @@ function renderCourts() {
                     <div class="court-tags">
                         ${c.tags.map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
-                    <span class="court-price">₱100/hr</span>
+                    <span class="court-price">₱${c.price_per_hour}/hr</span>
                 </div>
                 <button class="book-btn" onclick="openBooking(${c.id})">Book Now</button>
             </div>
@@ -1690,6 +1714,7 @@ function openBooking(courtId) {
     selDate   = toDateStr(now);
 
     document.getElementById('b-court-name').textContent = curCourt.name;
+    document.getElementById('b-price').textContent = `₱${curCourt.price_per_hour}/hour`;
     document.getElementById('b-court-tags').innerHTML = curCourt.tags.map(t => `<span class="tag">${t}</span>`).join('');
 
     const svg = document.getElementById('b-court-svg');
@@ -1994,7 +2019,7 @@ function renderSlots() {
         return `
             <div class="${cls}" ${click}>
                 <div class="slot-time">${slot}</div>
-                <div class="slot-price">₱100</div>
+                <div class="slot-price">₱${curCourt.price_per_hour}</div>
                 ${statusLbl}
                 ${statusIcon}
             </div>`;
