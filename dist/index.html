@@ -1333,6 +1333,25 @@
     </div>
 </div>
 
+<!-- ── COURT UNAVAILABLE MODAL ── -->
+<div class="overlay" id="court-unavailable-modal">
+    <div class="modal" style="max-width:380px;border-radius:20px;padding:0;overflow:hidden;">
+        <div style="padding:2rem 1.75rem 1.5rem;text-align:center;">
+            <div style="width:64px;height:64px;background:#fff0f0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+            </div>
+            <div style="font-size:1.15rem;font-weight:700;color:#1a1a1a;margin-bottom:0.5rem;">Court Unavailable</div>
+            <div id="court-unavailable-msg" style="font-size:0.85rem;color:#666;line-height:1.6;margin-bottom:1.5rem;">This court is no longer available. Please choose another court.</div>
+            <button onclick="closeCourtUnavailableModal()"
+                style="width:100%;padding:0.85rem;background:var(--green-dark);color:#fff;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ── Supabase ───────────────────────────────────────────
 const { createClient } = supabase;
@@ -1703,7 +1722,21 @@ function renderCourts() {
 }
 
 // ── Open Booking Page ─────────────────────────────────
-function openBooking(courtId) {
+async function openBooking(courtId) {
+    // Live check — guard against admin deactivating court while page is open
+    try {
+        const res  = await fetch(
+            `${SUPABASE_URL}/rest/v1/courts?select=is_active&id=eq.${courtId}`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY } }
+        );
+        const rows = await res.json();
+        if (!rows.length || !rows[0].is_active) {
+            document.getElementById('court-unavailable-modal').classList.add('show');
+            fetchCourts().then(() => renderCourts());
+            return;
+        }
+    } catch (_) { /* network error — allow through, booking submit will still validate */ }
+
     curCourt  = COURTS.find(c => c.id === courtId);
     selStart  = -1; selEnd = -1;
     bookedSlots = new Set();
@@ -2565,6 +2598,10 @@ async function finishBooking() {
 
 function closeConflictModal() {
     document.getElementById('conflict-modal').classList.remove('show');
+}
+
+function closeCourtUnavailableModal() {
+    document.getElementById('court-unavailable-modal').classList.remove('show');
 }
 
 // ── Helpers ───────────────────────────────────────────
