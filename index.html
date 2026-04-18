@@ -2128,6 +2128,8 @@ function showMain() {
 window.addEventListener('popstate', () => {
     if (document.getElementById('booking-page').style.display === 'block') {
         showMain();
+    } else if (openPlaySession && document.getElementById('open-play-screen').style.display === 'block') {
+        showModeScreen();
     } else if (openPlaySession && document.getElementById('main-page').style.display === 'block') {
         showModeScreen();
     }
@@ -2497,6 +2499,7 @@ let opWizardStep = 0;
 let opName       = '';
 let opPhone      = '';
 let opPayment    = '';
+let opReceiptFile = null;
 
 function confirmBooking() {
     if (selStart === -1 || !selDate) return;
@@ -3033,6 +3036,7 @@ function showOpenPlay() {
     document.getElementById('mode-screen').style.display      = 'none';
     document.getElementById('open-play-screen').style.display = 'block';
     window.scrollTo(0, 0);
+    history.pushState({ page: 'openplay' }, '');
     renderSessionCard();
     renderFormArea();
 }
@@ -3138,10 +3142,11 @@ const OP_WIZARD_STEPS = [
 ];
 
 function openOpWizard() {
-    opWizardStep = 0;
-    opName       = '';
-    opPhone      = '';
-    opPayment    = '';
+    opWizardStep  = 0;
+    opName        = '';
+    opPhone       = '';
+    opPayment     = '';
+    opReceiptFile = null;
     wizardMode   = 'openplay';
     const titleEl = document.getElementById('modal-header-title');
     if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> Join Open Play`;
@@ -3244,9 +3249,18 @@ function opRenderStepContent() {
                 </button>
                 <div style="font-size:1.5rem;font-weight:800;color:var(--green-dark);margin-bottom:0.2rem;">&#8369;${Number(amount).toLocaleString()}</div>
                 <div style="font-size:0.8rem;color:#888;margin-bottom:1rem;">Amount to pay</div>
-                <div style="padding:0.85rem 1rem;background:#e0f9fc;border:1px solid #a5f3fc;border-radius:10px;font-size:0.82rem;color:#0e7490;line-height:1.5;text-align:left;">
-                    &#128161; After paying, tap <strong>Done</strong> to confirm your spot.
+            </div>
+            <div class="receipt-upload" style="margin-top:0.5rem;">
+                <label class="receipt-label">Upload ${opPayment} Payment Screenshot</label>
+                <div class="receipt-drop" onclick="document.getElementById('op-receipt-file').click()">
+                    <div id="op-receipt-preview-wrap">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div style="font-size:0.82rem;color:#aaa;margin-top:0.4rem;">Click to upload screenshot</div>
+                    </div>
                 </div>
+                <input type="file" id="op-receipt-file" accept="image/*" style="display:none"
+                       onchange="handleOpReceiptUpload(this)"/>
+                <div class="receipt-hint">JPG, PNG accepted</div>
             </div>`;
     }
 }
@@ -3257,7 +3271,7 @@ function opRenderFooter() {
     prev.disabled = opWizardStep === 0;
     if (opWizardStep === 3) {
         next.textContent = 'Done';
-        next.disabled    = false;
+        next.disabled    = !opReceiptFile;
     } else {
         next.innerHTML = 'Next &#8594;';
         next.disabled  = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10) : false;
@@ -3266,8 +3280,20 @@ function opRenderFooter() {
 
 async function opWizardNext() {
     if (opWizardStep === 3) { await finishOpRegistration(); return; }
+    if (opWizardStep === 2) opReceiptFile = null;
     opWizardStep++;
     opRenderWizard();
+}
+
+function handleOpReceiptUpload(input) {
+    opReceiptFile = input.files[0] || null;
+    const wrap = document.getElementById('op-receipt-preview-wrap');
+    if (opReceiptFile && wrap) {
+        const url = URL.createObjectURL(opReceiptFile);
+        wrap.innerHTML = `<img src="${url}" style="max-width:100%;max-height:120px;border-radius:8px;object-fit:contain;"/>
+            <div style="font-size:0.78rem;color:var(--green-dark);margin-top:0.4rem;">&#10003; ${opReceiptFile.name}</div>`;
+    }
+    opRenderFooter();
 }
 
 function opWizardPrev() {
