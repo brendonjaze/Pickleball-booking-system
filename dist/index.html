@@ -7,13 +7,13 @@
     <script src="supabase.min.js"></script>
     <style>
         /* ── Local fonts (offline-ready) ─────────────────── */
-        @font-face { font-family: 'Dancing Script'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/dancing-script-700.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 300; font-style: normal; font-display: swap; src: url('fonts/montserrat-300.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('fonts/montserrat-400.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 500; font-style: normal; font-display: swap; src: url('fonts/montserrat-500.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('fonts/montserrat-600.ttf') format('truetype'); }
-        @font-face { font-family: 'Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/montserrat-700.ttf') format('truetype'); }
-        @font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/playfair-display-700.ttf') format('truetype'); }
+        @font-face { font-family: 'Dancing Script'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/dancing-script-700-DvaMCgQG.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 300; font-style: normal; font-display: swap; src: url('./assets/montserrat-300-DoRPafQT.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('./assets/montserrat-400-nzdtX8SM.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 500; font-style: normal; font-display: swap; src: url('./assets/montserrat-500-Ci8EClub.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('./assets/montserrat-600-CHfolbyA.ttf') format('truetype'); }
+        @font-face { font-family: 'Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/montserrat-700-w_OrssVO.ttf') format('truetype'); }
+        @font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; font-display: swap; src: url('./assets/playfair-display-700-Dle4x85Y.ttf') format('truetype'); }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -69,6 +69,7 @@
             display: block;
             width: min(500px, 75vw);
             height: auto;
+            margin: 0 auto 1.5rem;
             object-fit: contain;
             opacity: 0;
             animation: flyingLogoFadeIn 1.2s ease forwards;
@@ -1545,7 +1546,7 @@ function flashSlot(slot) {
     const el = document.querySelectorAll('#slots-grid .slot')[idx];
     if (el) {
         el.classList.remove('slot-flash');
-        void el.offsetWidth;
+        void el.offsetWidth; // force reflow to restart animation
         el.classList.add('slot-flash');
         el.addEventListener('animationend', () => el.classList.remove('slot-flash'), { once: true });
     }
