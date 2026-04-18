@@ -2128,6 +2128,8 @@ function showMain() {
 window.addEventListener('popstate', () => {
     if (document.getElementById('booking-page').style.display === 'block') {
         showMain();
+    } else if (openPlaySession && document.getElementById('main-page').style.display === 'block') {
+        showModeScreen();
     }
 });
 
@@ -3024,6 +3026,7 @@ function showMainFromMode() {
     document.getElementById('open-play-screen').style.display = 'none';
     document.getElementById('main-page').style.display        = 'block';
     window.scrollTo(0, 0);
+    history.pushState({ page: 'main' }, '');
 }
 
 function showOpenPlay() {
