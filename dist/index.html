@@ -1121,6 +1121,293 @@
             .announcement-banner h3 { font-size: 0.9rem; }
             .announcement-banner p { font-size: 0.82rem; }
         }
+
+        /* ─── Mode Screen ─── */
+        #mode-screen { display: none; }
+
+        .mode-section {
+            padding: 3rem 2rem 4rem;
+            max-width: 680px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: calc(100vh - 70px);
+            justify-content: center;
+        }
+
+        .mode-eyebrow {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            color: var(--pink);
+            text-transform: uppercase;
+            margin-bottom: 0.6rem;
+        }
+
+        .mode-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.9rem, 5vw, 2.6rem);
+            color: var(--green-dark);
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .mode-subtitle {
+            color: var(--gray);
+            font-size: 0.92rem;
+            text-align: center;
+            margin-bottom: 2.8rem;
+            line-height: 1.6;
+        }
+
+        .mode-cards {
+            display: flex;
+            gap: 1.4rem;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .mode-card {
+            flex: 1;
+            max-width: 270px;
+            min-height: 210px;
+            background: var(--white);
+            border-radius: 22px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.85rem;
+            box-shadow: 0 4px 28px rgba(0,0,0,0.08);
+            transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s;
+            position: relative;
+            overflow: hidden;
+            padding: 2rem 1.5rem;
+            font-family: 'Montserrat', sans-serif;
+            opacity: 0;
+            animation: cardFadeUp 0.45s ease forwards;
+        }
+
+        .mode-card:nth-child(1) { animation-delay: 0.08s; }
+        .mode-card:nth-child(2) { animation-delay: 0.2s; }
+
+        @keyframes cardFadeUp {
+            from { opacity: 0; transform: translateY(22px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            border-radius: 22px 22px 0 0;
+        }
+
+        .mode-card.open-play-card::before { background: linear-gradient(90deg, var(--pink), #f97316); }
+        .mode-card.book-court-card::before { background: linear-gradient(90deg, var(--green-dark), var(--green-medium)); }
+
+        .mode-card:hover { transform: translateY(-7px); box-shadow: 0 16px 48px rgba(0,0,0,0.13); }
+        .mode-card:active { transform: scale(0.97); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+        .mode-card-icon {
+            width: 58px; height: 58px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+
+        .open-play-card .mode-card-icon { background: var(--pink-light); }
+        .book-court-card .mode-card-icon { background: var(--green-light); }
+
+        .mode-card-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            letter-spacing: 0.01em;
+        }
+
+        .mode-card-desc {
+            font-size: 0.76rem;
+            color: var(--gray);
+            text-align: center;
+            line-height: 1.55;
+        }
+
+        .mode-card-pill {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.22rem 0.65rem;
+            border-radius: 999px;
+            letter-spacing: 0.04em;
+        }
+
+        .open-play-card .mode-card-pill { background: var(--pink-light); color: var(--pink); }
+        .book-court-card .mode-card-pill { background: var(--green-light); color: var(--green-dark); }
+
+        @media (max-width: 520px) {
+            .mode-section { padding: 2rem 1.25rem 3rem; min-height: calc(100vh - 62px); justify-content: flex-start; padding-top: 3rem; }
+            .mode-cards { flex-direction: column; align-items: stretch; gap: 1rem; }
+            .mode-card { max-width: 100%; min-height: 110px; flex-direction: row; justify-content: flex-start; padding: 1.4rem 1.5rem; gap: 1.1rem; border-radius: 16px; }
+            .mode-card::before { height: 0; width: 4px; top: 0; bottom: 0; right: auto; border-radius: 16px 0 0 16px; }
+            .mode-card-icon { width: 50px; height: 50px; flex-shrink: 0; }
+            .mode-card-title { font-size: 1rem; }
+            .mode-card-desc { text-align: left; }
+            .mode-card:hover { transform: translateX(4px); }
+        }
+
+        /* ─── Open Play Screen ─── */
+        #open-play-screen { display: none; }
+
+        .op-wrap {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .op-session-card {
+            background: var(--white);
+            border-radius: 18px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 18px rgba(0,0,0,0.07);
+            margin-bottom: 1.25rem;
+            border-top: 5px solid var(--pink);
+        }
+
+        .op-session-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--green-dark);
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .op-info-row {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .op-info-row:last-child { border-bottom: none; }
+
+        .op-info-icon {
+            width: 34px; height: 34px;
+            background: var(--green-light);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--green-dark);
+        }
+
+        .op-info-label { color: #999; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; margin-bottom: 1px; }
+        .op-info-value { font-weight: 700; font-size: 0.95rem; color: #1a1a1a; }
+
+        .op-spots-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.22rem 0.7rem;
+            border-radius: 999px;
+            margin-left: 0.5rem;
+        }
+
+        .op-spots-badge.spots-ok   { background: #dcfce7; color: #15803d; }
+        .op-spots-badge.spots-low  { background: #fef3c7; color: #b45309; }
+        .op-spots-badge.spots-full { background: #fee2e2; color: #b91c1c; }
+
+        .op-form-card {
+            background: var(--white);
+            border-radius: 18px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 18px rgba(0,0,0,0.07);
+        }
+
+        .op-form-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1.2rem;
+        }
+
+        .op-field { margin-bottom: 1rem; }
+
+        .op-field label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.4rem;
+        }
+
+        .op-field input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Montserrat', sans-serif;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .op-field input:focus { border-color: var(--pink); }
+
+        .op-submit-btn {
+            width: 100%;
+            padding: 0.95rem;
+            background: linear-gradient(135deg, var(--pink), #f97316);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.04em;
+            transition: opacity 0.18s, transform 0.12s;
+            margin-top: 0.4rem;
+        }
+
+        .op-submit-btn:hover:not(:disabled) { opacity: 0.88; }
+        .op-submit-btn:active:not(:disabled) { transform: scale(0.98); }
+        .op-submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .op-full-card {
+            background: var(--white);
+            border-radius: 18px;
+            padding: 2rem 1.5rem;
+            box-shadow: 0 2px 18px rgba(0,0,0,0.07);
+            text-align: center;
+        }
+
+        .op-success-icon {
+            width: 68px; height: 68px;
+            background: var(--pink-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.1rem;
+        }
+
+        @media (max-width: 600px) {
+            .op-wrap { padding: 1.25rem 1rem 3rem; }
+        }
     </style>
 </head>
 <body>
@@ -1158,6 +1445,59 @@
             <h2 class="section-title">Available Courts</h2>
             <p class="section-subtitle">Book your court and enjoy the game</p>
             <div class="courts-grid" id="courts-grid"></div>
+        </div>
+    </div>
+
+    <!-- ── MODE SCREEN ── -->
+    <div id="mode-screen">
+        <header class="header">
+            <img src="BMJ COURT PICKLEBALL - PRIMARY LOGO.png" alt="Glan Pickleball Logo" class="header-img-logo">
+            <div class="header-logo">
+                <span class="h-glan">GLAN</span>
+                <span class="h-pickle">Pickleball</span>
+                <span class="h-comm">COMMUNITY</span>
+            </div>
+        </header>
+        <div class="mode-section">
+            <div class="mode-eyebrow">Welcome</div>
+            <h2 class="mode-title">How would you<br>like to play?</h2>
+            <p class="mode-subtitle">Choose your game mode for today</p>
+            <div class="mode-cards">
+                <button class="mode-card open-play-card" onclick="showOpenPlay()">
+                    <div class="mode-card-icon">🏓</div>
+                    <div class="mode-card-title">Open Play</div>
+                    <div class="mode-card-desc" id="mode-op-desc">Join today's session</div>
+                    <span class="mode-card-pill">Sign up now</span>
+                </button>
+                <button class="mode-card book-court-card" onclick="showMainFromMode()">
+                    <div class="mode-card-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                    </div>
+                    <div class="mode-card-title">Book a Court</div>
+                    <div class="mode-card-desc">Reserve your own court &amp; time</div>
+                    <span class="mode-card-pill">Browse courts</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── OPEN PLAY SCREEN ── -->
+    <div id="open-play-screen">
+        <header class="header">
+            <img src="BMJ COURT PICKLEBALL - PRIMARY LOGO.png" alt="Glan Pickleball Logo" class="header-img-logo">
+            <div class="header-logo">
+                <span class="h-glan">GLAN</span>
+                <span class="h-pickle">Pickleball</span>
+                <span class="h-comm">COMMUNITY</span>
+            </div>
+        </header>
+        <div class="op-wrap">
+            <button class="back-btn" onclick="showModeScreen()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+            </button>
+            <div id="op-session-card"></div>
+            <div id="op-form-area"></div>
         </div>
     </div>
 
@@ -1463,6 +1803,8 @@ let calYear       = new Date().getFullYear();
 let fullyBookedDates = new Set(); // dates where all slots are booked for current court
 let courtLocks = [];              // fetched from court_locks table
 let courtTodayStatus = {};        // court_id → 'available' | 'full'
+let openPlaySession  = null;
+let openPlayRegCount = 0;
 
 // ── Unregister stale service workers from other projects ──
 if ('serviceWorker' in navigator) {
@@ -1573,17 +1915,27 @@ function getSlotLockReason(slot) {
 // ── Loading Screen ────────────────────────────────────
 window.addEventListener('load', async () => {
     fetchAnnouncement();
-    await fetchCourts();
+    await Promise.all([fetchCourts(), fetchOpenPlay()]);
     fetchCourtLocks().then(() => fetchTodayAvailability());
 
     // Show app behind the loading screen so we can measure header position
     document.getElementById('app').style.display = 'block';
     renderCourts();
 
+    if (openPlaySession) {
+        document.getElementById('main-page').style.display = 'none';
+        document.getElementById('mode-screen').style.display = 'block';
+        const descEl = document.getElementById('mode-op-desc');
+        if (descEl && openPlaySession.start_time && openPlaySession.end_time) {
+            descEl.textContent = `${fmtTime(openPlaySession.start_time)} \u2013 ${fmtTime(openPlaySession.end_time)}`;
+        }
+    }
+
     setTimeout(() => {
         const ls          = document.getElementById('loading-screen');
         const flyingLogo  = document.getElementById('flying-logo');
-        const headerLogo  = document.querySelector('#main-page .header-img-logo');
+        const logoSelector = openPlaySession ? '#mode-screen .header-img-logo' : '#main-page .header-img-logo';
+        const headerLogo  = document.querySelector(logoSelector);
         const rect        = headerLogo.getBoundingClientRect();
 
         // Capture logo's current in-flow position before anything moves
@@ -2613,6 +2965,197 @@ function toDateStr(d) {
 function formatDate(str) {
     const d = new Date(str + 'T00:00:00');
     return d.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+// ── Open Play ─────────────────────────────────────────
+async function fetchOpenPlay() {
+    try {
+        const { data } = await db.from('open_play_sessions')
+            .select('*')
+            .eq('is_enabled', true)
+            .limit(1);
+        if (data && data.length > 0) {
+            openPlaySession = data[0];
+            const { count } = await db.from('open_play_registrations')
+                .select('id', { count: 'exact', head: true })
+                .eq('session_id', openPlaySession.id);
+            openPlayRegCount = count || 0;
+        }
+    } catch(e) { /* silently skip */ }
+}
+
+function fmtTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hr = h % 12 || 12;
+    return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function fmtDate(d) {
+    if (!d) return '';
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+function showModeScreen() {
+    document.getElementById('main-page').style.display        = 'none';
+    document.getElementById('booking-page').style.display     = 'none';
+    document.getElementById('open-play-screen').style.display = 'none';
+    document.getElementById('mode-screen').style.display      = 'block';
+    window.scrollTo(0, 0);
+}
+
+function showMainFromMode() {
+    document.getElementById('mode-screen').style.display      = 'none';
+    document.getElementById('open-play-screen').style.display = 'none';
+    document.getElementById('main-page').style.display        = 'block';
+    window.scrollTo(0, 0);
+}
+
+function showOpenPlay() {
+    document.getElementById('mode-screen').style.display      = 'none';
+    document.getElementById('open-play-screen').style.display = 'block';
+    window.scrollTo(0, 0);
+    renderSessionCard();
+    renderFormArea();
+}
+
+function renderSessionCard() {
+    const s = openPlaySession;
+    if (!s) return;
+    const spotsLeft = s.max_players - openPlayRegCount;
+    const isFull    = spotsLeft <= 0;
+    let badgeClass  = spotsLeft <= 3 ? 'spots-low' : 'spots-ok';
+    let badgeText   = `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
+    if (isFull) { badgeClass = 'spots-full'; badgeText = 'Session Full'; }
+
+    document.getElementById('op-session-card').innerHTML = `
+        <div class="op-session-card">
+            <div class="op-session-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Open Play Session
+            </div>
+            <div class="op-info-row">
+                <div class="op-info-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <div>
+                    <div class="op-info-label">DATE</div>
+                    <div class="op-info-value">${fmtDate(s.date)}</div>
+                </div>
+            </div>
+            <div class="op-info-row">
+                <div class="op-info-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="op-info-label">TIME</div>
+                    <div class="op-info-value">${fmtTime(s.start_time)} &ndash; ${fmtTime(s.end_time)}</div>
+                </div>
+            </div>
+            <div class="op-info-row">
+                <div class="op-info-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+                <div>
+                    <div class="op-info-label">PRICE PER PLAYER</div>
+                    <div class="op-info-value">&#8369;${s.price_per_player}</div>
+                </div>
+            </div>
+            <div class="op-info-row">
+                <div class="op-info-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </div>
+                <div>
+                    <div class="op-info-label">PLAYERS</div>
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.4rem;margin-top:2px;">
+                        <div class="op-info-value">${openPlayRegCount} / ${s.max_players}</div>
+                        <span class="op-spots-badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function renderFormArea(successName) {
+    const s       = openPlaySession;
+    const isFull  = !s || (s.max_players - openPlayRegCount) <= 0;
+    const formArea = document.getElementById('op-form-area');
+
+    if (successName !== undefined) {
+        formArea.innerHTML = `
+            <div class="op-form-card" style="text-align:center;padding:2rem 1.5rem;">
+                <div class="op-success-icon">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style="font-size:1.2rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">You're In! &#127881;</div>
+                <div style="font-size:0.88rem;color:#666;line-height:1.7;">
+                    You've joined the Open Play session.<br>See you on the court, <strong>${successName}</strong>!
+                </div>
+            </div>`;
+        return;
+    }
+
+    if (isFull) {
+        formArea.innerHTML = `
+            <div class="op-full-card">
+                <div style="font-size:2.2rem;margin-bottom:0.65rem;">&#128542;</div>
+                <div style="font-size:1rem;font-weight:700;color:#b91c1c;margin-bottom:0.4rem;">Session Full</div>
+                <div style="font-size:0.84rem;color:#777;line-height:1.6;">All spots are taken. Check back later or book a private court.</div>
+            </div>`;
+        return;
+    }
+
+    formArea.innerHTML = `
+        <div class="op-form-card">
+            <div class="op-form-title">Sign Up for This Session</div>
+            <div class="op-field">
+                <label for="op-name">Full Name</label>
+                <input type="text" id="op-name" placeholder="e.g. Juan dela Cruz" autocomplete="name">
+            </div>
+            <div class="op-field">
+                <label for="op-phone">Phone Number</label>
+                <input type="tel" id="op-phone" placeholder="e.g. 09171234567" autocomplete="tel">
+            </div>
+            <button class="op-submit-btn" id="op-submit-btn" onclick="submitOpenPlay()">Join Open Play</button>
+            <div id="op-error" style="color:#b91c1c;font-size:0.82rem;margin-top:0.6rem;display:none;"></div>
+        </div>`;
+    setTimeout(() => document.getElementById('op-name')?.focus(), 60);
+}
+
+async function submitOpenPlay() {
+    const name  = document.getElementById('op-name')?.value.trim();
+    const phone = document.getElementById('op-phone')?.value.trim();
+    const btn   = document.getElementById('op-submit-btn');
+    const errEl = document.getElementById('op-error');
+
+    if (!name || !phone) {
+        errEl.textContent = 'Please fill in both fields.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing up\u2026';
+    errEl.style.display = 'none';
+
+    try {
+        const { error } = await db.from('open_play_registrations').insert({
+            session_id: openPlaySession.id,
+            name,
+            phone,
+        });
+        if (error) throw error;
+
+        openPlayRegCount++;
+        renderSessionCard();
+        renderFormArea(name);
+    } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Join Open Play';
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+    }
 }
 </script>
 </body>
