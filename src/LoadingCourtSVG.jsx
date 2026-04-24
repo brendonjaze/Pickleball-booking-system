@@ -1,7 +1,7 @@
 import { motion, useAnimation } from 'framer-motion';
 import { useEffect } from 'react';
 
-const LINE = '#a3e635';
+const LINE = '#4ade80';
 
 const draw = (delay, duration) => ({
   hidden:  { pathLength: 0, opacity: 0 },
@@ -32,8 +32,11 @@ export default function LoadingCourtSVG() {
   const controls = useAnimation();
 
   useEffect(() => {
-    // Wait for SVG to be painted so getTotalLength() returns correct values
-    const id = requestAnimationFrame(() => controls.start('visible'));
+    let id;
+    id = requestAnimationFrame(async () => {
+      await controls.start('visible');
+      window.dispatchEvent(new CustomEvent('courtAnimationComplete'));
+    });
     return () => cancelAnimationFrame(id);
   }, [controls]);
 
@@ -63,21 +66,21 @@ export default function LoadingCourtSVG() {
       <rect x="50" y="68" width="800" height="344" fill="url(#lc-court-bg)" rx="3"/>
 
       {/* 1. Outer boundary — top → right → bottom → left */}
-      <Path d="M 50,68  L 850,68"   strokeWidth={12} delay={0.1}  duration={0.35} controls={controls} />
-      <Path d="M 850,68 L 850,412"  strokeWidth={12} delay={0.45} duration={0.15} controls={controls} />
-      <Path d="M 850,412 L 50,412"  strokeWidth={12} delay={0.6}  duration={0.35} controls={controls} />
-      <Path d="M 50,412 L 50,68"    strokeWidth={12} delay={0.95} duration={0.15} controls={controls} />
+      <Path d="M 50,68  L 850,68"   strokeWidth={12} delay={0.1}  duration={0.5}  controls={controls} />
+      <Path d="M 850,68 L 850,412"  strokeWidth={12} delay={0.6}  duration={0.22} controls={controls} />
+      <Path d="M 850,412 L 50,412"  strokeWidth={12} delay={0.82} duration={0.5}  controls={controls} />
+      <Path d="M 50,412 L 50,68"    strokeWidth={12} delay={1.32} duration={0.22} controls={controls} />
 
       {/* 2. Net */}
-      <Path d="M 450,68 L 450,412"  strokeWidth={5}  delay={1.2}  duration={0.4}  controls={controls} />
+      <Path d="M 450,68 L 450,412"  strokeWidth={5}  delay={1.6}  duration={0.4}  controls={controls} />
 
       {/* 3. Kitchen / NVZ lines */}
-      <Path d="M 323,68 L 323,412"  strokeWidth={5}  delay={1.65} duration={0.4}  controls={controls} />
-      <Path d="M 577,68 L 577,412"  strokeWidth={5}  delay={1.65} duration={0.4}  controls={controls} />
+      <Path d="M 323,68 L 323,412"  strokeWidth={5}  delay={2.05} duration={0.4}  controls={controls} />
+      <Path d="M 577,68 L 577,412"  strokeWidth={5}  delay={2.05} duration={0.4}  controls={controls} />
 
       {/* 4. Center service lines */}
-      <Path d="M 50,240 L 323,240"  strokeWidth={4}  delay={2.05} duration={0.35} controls={controls} />
-      <Path d="M 577,240 L 850,240" strokeWidth={4}  delay={2.05} duration={0.35} controls={controls} />
+      <Path d="M 50,240 L 323,240"  strokeWidth={4}  delay={2.45} duration={0.3}  controls={controls} />
+      <Path d="M 577,240 L 850,240" strokeWidth={4}  delay={2.45} duration={0.3}  controls={controls} />
 
       {/* Ball */}
       <motion.circle
@@ -86,7 +89,7 @@ export default function LoadingCourtSVG() {
         filter="url(#lc-ball-glow)"
         variants={{
           hidden:  { scale: 0, opacity: 0 },
-          visible: { scale: 1, opacity: 1, transition: { delay: 2.4, duration: 0.3, ease: 'easeOut' } },
+          visible: { scale: 1, opacity: 1, transition: { delay: 2.75, duration: 0.3, ease: 'easeOut' } },
         }}
         initial="hidden"
         animate={controls}

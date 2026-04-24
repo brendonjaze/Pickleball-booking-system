@@ -2071,6 +2071,13 @@ function getSlotLockReason(slot) {
 // ── Loading Screen ────────────────────────────────────
 window.addEventListener('load', async () => {
     fetchAnnouncement();
+
+    // Capture animation-complete event early so it's not missed during data fetch
+    const animReady = new Promise(resolve => {
+        window.addEventListener('courtAnimationComplete', resolve, { once: true });
+        setTimeout(resolve, 5000); // fallback if event never fires
+    });
+
     await Promise.all([fetchCourts(), fetchOpenPlay()]);
     fetchCourtLocks().then(() => fetchTodayAvailability());
 
@@ -2087,58 +2094,59 @@ window.addEventListener('load', async () => {
         }
     }
 
+    // Wait for court animation to finish before hiding loading screen
+    await animReady;
+
+    const ls          = document.getElementById('loading-screen');
+    const flyingLogo  = document.getElementById('flying-logo');
+    const logoSelector = openPlaySession ? '#mode-screen .header-img-logo' : '#main-page .header-img-logo';
+    const headerLogo  = document.querySelector(logoSelector);
+    const rect        = headerLogo.getBoundingClientRect();
+
+    // Capture logo's current in-flow position before anything moves
+    const logoRect = flyingLogo.getBoundingClientRect();
+
+    // Snap to fixed at the exact same visual position (no jump)
+    flyingLogo.style.position  = 'fixed';
+    flyingLogo.style.top       = logoRect.top + 'px';
+    flyingLogo.style.left      = logoRect.left + 'px';
+    flyingLogo.style.width     = logoRect.width + 'px';
+    flyingLogo.style.margin    = '0';
+    flyingLogo.style.zIndex    = '1000';
+    flyingLogo.style.transform = 'none';
+
+    // Move logo out of loading screen so the parent fade doesn't affect it
+    document.body.appendChild(flyingLogo);
+
+    // Force reflow so the browser registers the starting position
+    flyingLogo.getBoundingClientRect();
+
+    // Fade out loading screen
+    ls.classList.add('hide');
+
+    // Now animate to header top-left
+    requestAnimationFrame(() => {
+        flyingLogo.style.transition = [
+            'width 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+            'top 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+            'left 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+            'transform 1.6s cubic-bezier(0.4, 0, 0.2, 1)'
+        ].join(', ');
+        flyingLogo.style.width     = rect.width + 'px';
+        flyingLogo.style.top       = (rect.top + rect.height / 2) + 'px';
+        flyingLogo.style.left      = rect.left + 'px';
+        flyingLogo.style.transform = 'translateY(-50%)';
+    });
+
+    // Once the logo lands, reveal header logos and clean up
     setTimeout(() => {
-        const ls          = document.getElementById('loading-screen');
-        const flyingLogo  = document.getElementById('flying-logo');
-        const logoSelector = openPlaySession ? '#mode-screen .header-img-logo' : '#main-page .header-img-logo';
-        const headerLogo  = document.querySelector(logoSelector);
-        const rect        = headerLogo.getBoundingClientRect();
-
-        // Capture logo's current in-flow position before anything moves
-        const logoRect = flyingLogo.getBoundingClientRect();
-
-        // Snap to fixed at the exact same visual position (no jump)
-        flyingLogo.style.position  = 'fixed';
-        flyingLogo.style.top       = logoRect.top + 'px';
-        flyingLogo.style.left      = logoRect.left + 'px';
-        flyingLogo.style.width     = logoRect.width + 'px';
-        flyingLogo.style.margin    = '0';
-        flyingLogo.style.zIndex    = '1000';
-        flyingLogo.style.transform = 'none';
-
-        // Move logo out of loading screen so the parent fade doesn't affect it
-        document.body.appendChild(flyingLogo);
-
-        // Force reflow so the browser registers the starting position
-        flyingLogo.getBoundingClientRect();
-
-        // Fade out loading screen
-        ls.classList.add('hide');
-
-        // Now animate to header top-left
-        requestAnimationFrame(() => {
-            flyingLogo.style.transition = [
-                'width 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                'top 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                'left 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                'transform 1.6s cubic-bezier(0.4, 0, 0.2, 1)'
-            ].join(', ');
-            flyingLogo.style.width     = rect.width + 'px';
-            flyingLogo.style.top       = (rect.top + rect.height / 2) + 'px';
-            flyingLogo.style.left      = rect.left + 'px';
-            flyingLogo.style.transform = 'translateY(-50%)';
-        });
-
-        // Once the logo lands, reveal header logos and clean up
-        setTimeout(() => {
-            document.querySelectorAll('.header-img-logo').forEach(el => el.style.opacity = '1');
-            flyingLogo.style.display = 'none';
-            ls.style.display = 'none';
-            if (!localStorage.getItem('privacy_consent')) {
-                document.getElementById('privacy-modal').classList.add('show');
-            }
-        }, 1700);
-    }, 2600);
+        document.querySelectorAll('.header-img-logo').forEach(el => el.style.opacity = '1');
+        flyingLogo.style.display = 'none';
+        ls.style.display = 'none';
+        if (!localStorage.getItem('privacy_consent')) {
+            document.getElementById('privacy-modal').classList.add('show');
+        }
+    }, 1700);
 });
 
 // ── Privacy policy ────────────────────────────────────
