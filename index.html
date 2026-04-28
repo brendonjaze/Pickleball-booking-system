@@ -333,7 +333,22 @@
         .book-btn:active { transform: scale(0.98); }
 
         /* ─── Booking Page ─── */
-        #booking-page { display: none; }
+        #main-page, #booking-page {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #main-page.page-exit {
+            opacity: 0;
+            transform: translateY(-18px);
+        }
+        #booking-page {
+            display: none;
+            opacity: 0;
+            transform: translateY(22px);
+        }
+        #booking-page.page-enter {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
         .booking-wrap {
             max-width: 1100px;
@@ -1507,6 +1522,39 @@
         @media (max-width: 600px) {
             .op-wrap { padding: 1.25rem 1rem 3rem; }
         }
+
+        /* QR lightbox */
+        #qr-lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #qr-lightbox.open { display: flex; }
+        #qr-lightbox img {
+            max-width: min(92vw, 420px);
+            max-height: 92vh;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            background: #fff;
+            padding: 16px;
+        }
+        #qr-lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+        }
     </style>
 </head>
 <body>
@@ -2282,9 +2330,18 @@ async function openBooking(courtId) {
     const svg = document.getElementById('b-court-svg');
     svg.innerHTML = courtSVGContent(curCourt, 200, 320);
 
-    document.getElementById('main-page').style.display    = 'none';
-    document.getElementById('booking-page').style.display = 'block';
-    window.scrollTo(0, 0);
+    const mainEl    = document.getElementById('main-page');
+    const bookingEl = document.getElementById('booking-page');
+
+    mainEl.classList.add('page-exit');
+    setTimeout(() => {
+        mainEl.style.display    = 'none';
+        mainEl.classList.remove('page-exit');
+        bookingEl.style.display = 'block';
+        window.scrollTo(0, 0);
+        requestAnimationFrame(() => requestAnimationFrame(() => bookingEl.classList.add('page-enter')));
+    }, 200);
+
     history.pushState({ page: 'booking' }, '');
 
     renderCalendar();
@@ -2293,11 +2350,17 @@ async function openBooking(courtId) {
 }
 
 function showMain() {
-    // Unsubscribe real-time when leaving
     if (realtimeChan) { db.removeChannel(realtimeChan); realtimeChan = null; }
-    document.getElementById('main-page').style.display    = 'block';
-    document.getElementById('booking-page').style.display = 'none';
-    window.scrollTo(0, 0);
+    const mainEl    = document.getElementById('main-page');
+    const bookingEl = document.getElementById('booking-page');
+
+    bookingEl.classList.remove('page-enter');
+    setTimeout(() => {
+        bookingEl.style.display = 'none';
+        mainEl.style.display    = 'block';
+        window.scrollTo(0, 0);
+        requestAnimationFrame(() => requestAnimationFrame(() => mainEl.classList.remove('page-exit')));
+    }, 200);
 }
 
 window.addEventListener('popstate', () => {
@@ -2803,7 +2866,8 @@ function renderStepContent() {
                 <div style="display:inline-block;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;margin-bottom:0.65rem;">
                     <div id="qr-svg-wrap">
                         <img src="${qrFile}" alt="${bookingPayment} QR Code"
-                             style="width:180px;height:180px;object-fit:contain;display:block;"/>
+                             onclick="openQR(this)"
+                             style="width:180px;height:180px;object-fit:contain;display:block;cursor:zoom-in;"/>
                     </div>
                 </div>
                 <br>
@@ -3412,7 +3476,8 @@ function opRenderStepContent() {
                 </p>
                 <div style="display:inline-block;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;margin-bottom:0.65rem;">
                     <img src="${qrFiles[opPayment]}" alt="${opPayment} QR Code"
-                         style="width:180px;height:180px;object-fit:contain;display:block;"/>
+                         onclick="openQR(this)"
+                         style="width:180px;height:180px;object-fit:contain;display:block;cursor:zoom-in;"/>
                 </div><br>
                 <button onclick="downloadOpQR()" style="
                     display:inline-flex;align-items:center;gap:0.4rem;
@@ -3506,7 +3571,22 @@ async function finishOpRegistration() {
         alert('Registration failed. Please try again.');
     }
 }
+
+function openQR(imgEl) {
+    const lb = document.getElementById('qr-lightbox');
+    document.getElementById('qr-lightbox-img').src = imgEl.src;
+    lb.classList.add('open');
+}
+function closeQR() {
+    document.getElementById('qr-lightbox').classList.remove('open');
+}
 </script>
+
+<div id="qr-lightbox" onclick="closeQR()">
+    <button id="qr-lightbox-close" onclick="closeQR()" aria-label="Close">&#x2715;</button>
+    <img id="qr-lightbox-img" src="" alt="QR Code enlarged" onclick="event.stopPropagation()"/>
+</div>
+
 <script type="module" src="/src/loading-court-main.jsx"></script>
 </body>
 </html>
