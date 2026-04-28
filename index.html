@@ -2365,7 +2365,12 @@ function showMain() {
 
 window.addEventListener('popstate', () => {
     if (document.getElementById('booking-page').style.display === 'block') {
-        showMain();
+        if (wizardMode !== 'openplay' && wizardStep > 0) {
+            wizardStep--;
+            renderWizard();
+        } else {
+            showMain();
+        }
     } else if (openPlaySession && document.getElementById('open-play-screen').style.display === 'block') {
         showModeScreen();
     } else if (openPlaySession && document.getElementById('main-page').style.display === 'block') {
@@ -3090,6 +3095,7 @@ async function wizardNext() {
     if (wizardStep === 3) { await finishBooking(); return; }
     if (wizardStep === 2) receiptFile = null;
     wizardStep++;
+    history.pushState({ page: 'booking', step: wizardStep }, '');
     renderWizard();
 }
 
