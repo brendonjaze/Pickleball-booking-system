@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glan Pickleball Community</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0e7490">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BMJ Court">
+    <link rel="apple-touch-icon" href="/BMJ COURT PICKLEBALL - PRIMARY LOGO.png">
     <script src="supabase.min.js"></script>
     <style>
         /* ── Local fonts (offline-ready) ─────────────────── */
@@ -3601,5 +3607,12 @@ function closeQR() {
     <img id="qr-lightbox-img" src="" alt="QR Code enlarged" onclick="event.stopPropagation()"/>
 </div>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
 </body>
 </html>
