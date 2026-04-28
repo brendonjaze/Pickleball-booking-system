@@ -2364,6 +2364,10 @@ function showMain() {
 }
 
 window.addEventListener('popstate', () => {
+    if (document.getElementById('qr-lightbox').classList.contains('open')) {
+        closeQR();
+        return;
+    }
     if (document.getElementById('booking-page').style.display === 'block') {
         if (wizardMode !== 'openplay' && wizardStep > 0) {
             wizardStep--;
@@ -3582,6 +3586,7 @@ function openQR(imgEl) {
     const lb = document.getElementById('qr-lightbox');
     document.getElementById('qr-lightbox-img').src = imgEl.src;
     lb.classList.add('open');
+    history.pushState({ page: 'qr-lightbox' }, '');
 }
 function closeQR() {
     document.getElementById('qr-lightbox').classList.remove('open');
