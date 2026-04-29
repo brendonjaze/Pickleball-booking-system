@@ -2751,11 +2751,12 @@ let bookingPhone = '';
 let bookingPayment = '';
 
 // ── Op Wizard State ───────────────────────────────────
-let opWizardStep = 0;
-let opName       = '';
-let opPhone      = '';
-let opPayment    = '';
+let opWizardStep  = 0;
+let opName        = '';
+let opPhone       = '';
+let opPayment     = '';
 let opReceiptFile = null;
+let opSkillLevel  = '';
 
 function confirmBooking() {
     if (selStart === -1 || !selDate) return;
@@ -2840,7 +2841,7 @@ function renderStepContent() {
                 <label>Phone Number</label>
                 <input type="tel" id="phone-input" placeholder="e.g. 09171234567"
                        value="${bookingPhone}"
-                       oninput="bookingPhone = this.value; renderWizardFooter()"
+                       oninput="this.value = this.value.replace(/\D/g, ''); bookingPhone = this.value; renderWizardFooter()"
                        maxlength="11"/>
                 <div class="hint">Enter your 11-digit Philippine mobile number.</div>
             </div>`;
@@ -3253,7 +3254,7 @@ async function fetchOpenPlay() {
             .limit(1);
         if (data && data.length > 0) {
             openPlaySession = data[0];
-            const { count } = await db.from('open_play_registrations')
+            const { count } = await db.from('open_play_queue')
                 .select('id', { count: 'exact', head: true })
                 .eq('session_id', openPlaySession.id);
             openPlayRegCount = count || 0;
@@ -3356,7 +3357,7 @@ function renderSessionCard() {
         </div>`;
 }
 
-function renderFormArea(successName) {
+function renderFormArea(successName, queueNumber) {
     const s      = openPlaySession;
     const isFull = !s || (s.max_players - openPlayRegCount) <= 0;
     const el     = document.getElementById('op-form-area');
@@ -3368,8 +3369,14 @@ function renderFormArea(successName) {
                     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div style="font-size:1.2rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">You're In! &#127881;</div>
-                <div style="font-size:0.88rem;color:#666;line-height:1.7;">
+                ${queueNumber ? `
+                <div style="margin:0.75rem auto 0.5rem;background:var(--green-light);border:2px solid var(--green-dark);border-radius:14px;display:inline-block;padding:0.5rem 1.5rem;">
+                    <div style="font-size:0.72rem;color:var(--green-dark);font-weight:600;letter-spacing:1px;text-transform:uppercase;">Your Player Number</div>
+                    <div style="font-size:2.2rem;font-weight:800;color:var(--green-dark);line-height:1.2;">#${queueNumber}</div>
+                </div>` : ''}
+                <div style="font-size:0.88rem;color:#666;line-height:1.7;margin-top:0.75rem;">
                     You've joined the Open Play session.<br>See you on the court, <strong>${successName}</strong>!
+                    ${queueNumber ? `<br><span style="color:var(--green-dark);font-weight:600;">Listen for your number on the TV display.</span>` : ''}
                 </div>
             </div>`;
         return;
@@ -3405,6 +3412,7 @@ function openOpWizard() {
     opPhone       = '';
     opPayment     = '';
     opReceiptFile = null;
+    opSkillLevel  = '';
     wizardMode   = 'openplay';
     const titleEl = document.getElementById('modal-header-title');
     if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> Join Open Play`;
@@ -3468,9 +3476,26 @@ function opRenderStepContent() {
                 <label>Phone Number</label>
                 <input type="tel" id="op-phone-input" placeholder="e.g. 09171234567"
                        value="${opPhone}"
-                       oninput="opPhone = this.value; opRenderFooter()"
+                       oninput="this.value = this.value.replace(/\D/g, ''); opPhone = this.value; opRenderFooter()"
                        maxlength="11"/>
                 <div class="hint">Enter your 11-digit Philippine mobile number.</div>
+            </div>
+            <div class="phone-field" style="margin-top:1rem;">
+                <label>Skill Level</label>
+                <div style="display:flex;gap:0.6rem;margin-top:0.4rem;flex-wrap:wrap;">
+                    ${['beginner','intermediate','advanced'].map(level => `
+                        <button type="button"
+                            onclick="opSkillLevel='${level}'; opRenderWizard()"
+                            style="flex:1;min-width:80px;padding:0.55rem 0.5rem;border-radius:10px;
+                                   border:2px solid ${opSkillLevel===level ? 'var(--green-dark)' : 'var(--border)'};
+                                   background:${opSkillLevel===level ? 'var(--green-light)' : '#fff'};
+                                   color:${opSkillLevel===level ? 'var(--green-dark)' : 'var(--gray)'};
+                                   font-family:'Montserrat',sans-serif;font-size:0.8rem;font-weight:${opSkillLevel===level ? '700' : '500'};
+                                   cursor:pointer;text-transform:capitalize;transition:all 0.15s;">
+                            ${level.charAt(0).toUpperCase()+level.slice(1)}
+                        </button>`).join('')}
+                </div>
+                <div class="hint">Select the level that best describes your play style.</div>
             </div>`;
         setTimeout(() => document.getElementById('op-name-input')?.focus(), 50);
 
@@ -3533,7 +3558,7 @@ function opRenderFooter() {
         next.disabled    = !opReceiptFile;
     } else {
         next.innerHTML = 'Next &#8594;';
-        next.disabled  = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10) : false;
+        next.disabled  = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 || !opSkillLevel) : false;
     }
 }
 
@@ -3574,16 +3599,18 @@ async function finishOpRegistration() {
     btn.disabled    = true;
     btn.textContent = 'Saving\u2026';
     try {
-        const { error } = await db.from('open_play_registrations').insert({
-            session_id: openPlaySession.id,
-            name:  opName,
-            phone: opPhone,
-        });
+        const { data: inserted, error } = await db.from('open_play_queue').insert({
+            session_id:  openPlaySession.id,
+            player_name: opName,
+            mobile:      opPhone,
+            skill_level: opSkillLevel,
+            is_guest:    true,
+        }).select('queue_number').single();
         if (error) throw error;
         openPlayRegCount++;
         closeModal();
         renderSessionCard();
-        renderFormArea(opName);
+        renderFormArea(opName, inserted?.queue_number);
     } catch(e) {
         btn.disabled    = false;
         btn.textContent = 'Done';
