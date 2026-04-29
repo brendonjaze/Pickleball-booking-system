@@ -2065,12 +2065,18 @@ function normalizeLock(l) {
 async function fetchCourtLocks() {
     try {
         const today = new Date().toISOString().slice(0, 10);
-        const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/court_locks?select=*&date=gte.${today}`,
-            { headers: { 'apikey': SUPABASE_ANON_KEY } }
-        );
-        const raw = await res.json();
-        courtLocks = Array.isArray(raw) ? raw.map(normalizeLock) : [];
+        const { maxMonth, maxYear } = getBookableRange();
+        const lastDay = new Date(maxYear, maxMonth + 1, 0).getDate();
+        const endDate = `${maxYear}-${String(maxMonth + 1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+        const { data, error } = await db
+            .from('court_locks')
+            .select('*')
+            .gte('date', today)
+            .lte('date', endDate)
+            .order('date', { ascending: true })
+            .limit(5000);
+        if (error) { console.error('Court locks fetch error:', error); courtLocks = []; return; }
+        courtLocks = Array.isArray(data) ? data.map(normalizeLock) : [];
     } catch (e) {
         console.error('Court locks fetch error:', e);
         courtLocks = [];
@@ -2109,20 +2115,29 @@ function flashSlot(slot) {
     }
 }
 
+function isDateFullyLocked(dateStr) {
+    if (!curCourt) return false;
+    return courtLocks.some(l =>
+        l.date === dateStr &&
+        l.court_id === curCourt.id &&
+        l.time_slot == null
+    );
+}
+
 function isSlotLocked(slot) {
     if (!curCourt || !selDate) return false;
     return courtLocks.some(l =>
         l.date === selDate &&
-        l.time_slot === slot &&
-        l.court_id === curCourt.id
+        l.court_id === curCourt.id &&
+        (l.time_slot === slot || l.time_slot == null)
     );
 }
 
 function getSlotLockReason(slot) {
     const lock = courtLocks.find(l =>
         l.date === selDate &&
-        l.time_slot === slot &&
-        l.court_id === curCourt.id
+        l.court_id === curCourt.id &&
+        (l.time_slot === slot || l.time_slot == null)
     );
     return lock ? lock.reason : '';
 }
@@ -2563,7 +2578,7 @@ function renderCalendar() {
         const dt  = new Date(calYear, calMonth, d);
         const str = toDateStr(dt);
         const past = dt < todayMidnight;
-        const full = !past && fullyBookedDates.has(str);
+        const full = !past && (fullyBookedDates.has(str) || isDateFullyLocked(str));
         let cls = 'cal-d';
         if (past)                                          cls += ' cal-past';
         else if (full)                                     cls += ' cal-full';
