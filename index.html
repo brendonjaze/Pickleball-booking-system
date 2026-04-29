@@ -3091,6 +3091,102 @@ function downloadReceipt() {
     }
 }
 
+function downloadOpReceipt(name, queueNumber) {
+    const s   = openPlaySession;
+    const ref = window._opBookingRef || ('OPR-' + Date.now().toString(36).toUpperCase());
+    const W = 600, pad = 40;
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+    const totalH = 620;
+    canvas.width  = W;
+    canvas.height = totalH;
+
+    const line = (y) => { ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W-pad, y); ctx.stroke(); };
+    const row  = (label, value, y, bold) => {
+        ctx.font = bold ? 'bold 18px Arial' : '17px Arial';
+        ctx.fillStyle = '#333'; ctx.textAlign = 'left';
+        ctx.fillText(label, pad, y);
+        ctx.fillStyle = bold ? '#1e5c45' : '#111'; ctx.textAlign = 'right';
+        ctx.fillText(value, W - pad, y);
+    };
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, totalH);
+
+    ctx.fillStyle = '#1e5c45';
+    ctx.fillRect(0, 0, W, 90);
+
+    ctx.fillStyle = '#f5f8e0';
+    ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('GLAN PICKLEBALL COMMUNITY', W/2, 38);
+    ctx.font = '16px Arial'; ctx.fillStyle = 'rgba(245,248,224,0.8)';
+    ctx.fillText('OPEN PLAY RECEIPT', W/2, 62);
+    ctx.font = '13px Arial'; ctx.fillStyle = 'rgba(245,248,224,0.6)';
+    ctx.fillText('Glan, Sarangani Province', W/2, 82);
+
+    const badgeY = 110;
+    ctx.fillStyle = '#e8f5e9';
+    ctx.beginPath(); ctx.roundRect(W/2 - 110, badgeY - 18, 220, 32, 16); ctx.fill();
+    ctx.fillStyle = '#1e5c45'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('✓  PAID VIA ' + (opPayment || '').toUpperCase(), W/2, badgeY + 6);
+
+    ctx.fillStyle = '#aaa'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(`Ref: ${ref}`, W/2, 162);
+
+    ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+    line(178);
+
+    let y = 210;
+    const gap = 42;
+    const rows = [
+        ['Date',         s ? fmtDate(s.date) : '',                                    false],
+        ['Time',         s ? `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}` : '', false],
+        ['Player Name',  name,                                                          false],
+        ['Contact',      opPhone,                                                       false],
+        ['Skill Level',  opSkillLevel,                                                  false],
+        ['Player #',     queueNumber ? `#${queueNumber}` : '—',                        false],
+        ['Payment',      opPayment,                                                     false],
+    ];
+    rows.forEach(([label, value, bold]) => { row(label, value, y, bold); y += gap; });
+
+    ctx.strokeStyle = '#e0e0e0';
+    line(y + 4); y += 36;
+    row('TOTAL AMOUNT', `P${Number(s ? s.price_per_player : 0).toLocaleString()}.00`, y, true);
+
+    y += 50;
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = '#ccc';
+    line(y); ctx.setLineDash([]);
+
+    y += 30;
+    ctx.fillStyle = '#aaa'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('Thank you for joining Open Play!', W/2, y); y += 22;
+    ctx.fillText('Please present this receipt at the facility.', W/2, y); y += 22;
+    ctx.font = '11px Arial';
+    ctx.fillText(`Generated: ${new Date().toLocaleString('en-PH')}`, W/2, y);
+
+    ctx.fillStyle = '#1e5c45';
+    ctx.fillRect(0, totalH - 14, W, 14);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    const ua = navigator.userAgent || '';
+    const isInApp = /FBAN|FBAV|Instagram|Twitter|Line\/|MicroMessenger|GSA\//i.test(ua);
+
+    if (isInApp) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+        overlay.innerHTML = `
+            <p style="color:#fff;font-size:14px;text-align:center;margin:0 0 12px;">Screenshot the image below.</p>
+            <img src="${dataUrl}" style="max-width:100%;max-height:70vh;border-radius:8px;display:block;" />
+            <button onclick="this.parentElement.remove()" style="margin-top:16px;background:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Close</button>`;
+        document.body.appendChild(overlay);
+    } else {
+        const a = document.createElement('a');
+        a.href     = dataUrl;
+        a.download = `GlanPickleball-OpenPlay-${ref}.jpg`;
+        a.click();
+    }
+}
+
 function handleReceiptUpload(input) {
     receiptFile = input.files[0] || null;
     const wrap = document.getElementById('receipt-preview-wrap');
@@ -3378,6 +3474,7 @@ function renderFormArea(successName, queueNumber) {
     const el     = document.getElementById('op-form-area');
 
     if (successName !== undefined) {
+        if (!window._opBookingRef) window._opBookingRef = 'OPR-' + Date.now().toString(36).toUpperCase();
         el.innerHTML = `
             <div class="op-form-card" style="text-align:center;padding:2rem 1.5rem;">
                 <div class="op-success-icon">
@@ -3393,6 +3490,14 @@ function renderFormArea(successName, queueNumber) {
                     You've joined the Open Play session.<br>See you on the court, <strong>${successName}</strong>!
                     ${queueNumber ? `<br><span style="color:var(--green-dark);font-weight:600;">Listen for your number on the TV display.</span>` : ''}
                 </div>
+                <button onclick="downloadOpReceipt('${successName.replace(/'/g,"\\'")}', ${queueNumber || 'null'})" style="
+                    display:inline-flex;align-items:center;gap:0.4rem;
+                    background:var(--green-dark);color:#fff;border:none;border-radius:8px;
+                    padding:0.6rem 1.1rem;font-size:0.82rem;font-weight:600;
+                    cursor:pointer;font-family:'Montserrat',sans-serif;margin-top:0.75rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Download Receipt
+                </button>
             </div>`;
         return;
     }
