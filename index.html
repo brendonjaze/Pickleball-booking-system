@@ -1594,8 +1594,6 @@
             </div>
         </header>
 
-        <div id="main-announcement"></div>
-
         <div class="courts-section">
             <h2 class="section-title">Available Courts</h2>
             <p class="section-subtitle">Book your court and enjoy the game</p>
@@ -1613,6 +1611,7 @@
                 <span class="h-comm">COMMUNITY</span>
             </div>
         </header>
+        <div id="main-announcement"></div>
         <div class="mode-section">
             <div class="mode-eyebrow">Welcome</div>
             <h2 class="mode-title">How would you<br>like to play?</h2>
@@ -2014,6 +2013,7 @@ let realtimeChan  = null;
 let calMonth      = new Date().getMonth();
 let calYear       = new Date().getFullYear();
 let fullyBookedDates = new Set(); // dates where all slots are booked for current court
+let openPlayDates    = new Set(); // dates reserved for open play — court booking blocked
 let courtLocks = [];              // fetched from court_locks table
 let courtTodayStatus = {};        // court_id → 'available' | 'full'
 let openPlaySession  = null;
@@ -2387,9 +2387,18 @@ function showMain() {
     }, 200);
 }
 
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (e) => {
     if (document.getElementById('qr-lightbox').classList.contains('open')) {
         closeQR();
+        return;
+    }
+    if (e.state?.page === 'openplay-wizard') {
+        opWizardStep = e.state.step;
+        opRenderWizard();
+        return;
+    }
+    if (document.getElementById('modal').classList.contains('show') && wizardMode === 'openplay') {
+        closeModal();
         return;
     }
     if (document.getElementById('booking-page').style.display === 'block') {
@@ -2575,15 +2584,17 @@ function renderCalendar() {
     for (let d = 1; d <= daysInMonth; d++) {
         const dt  = new Date(calYear, calMonth, d);
         const str = toDateStr(dt);
-        const past = dt < todayMidnight;
-        const full = !past && (fullyBookedDates.has(str) || isDateFullyLocked(str));
+        const past    = dt < todayMidnight;
+        const openPlay = !past && openPlayDates.has(str);
+        const full    = !past && !openPlay && (fullyBookedDates.has(str) || isDateFullyLocked(str));
         let cls = 'cal-d';
         if (past)                                          cls += ' cal-past';
+        else if (openPlay)                                 cls += ' cal-full';
         else if (full)                                     cls += ' cal-full';
         else if (str === selDate)                          cls += ' cal-sel';
         else if (dt.getTime() === todayMidnight.getTime()) cls += ' cal-today';
-        const click = (past || full) ? '' : `onclick="pickDate('${str}')"`;
-        const title = full ? 'title="Fully booked"' : '';
+        const click = (past || full || openPlay) ? '' : `onclick="pickDate('${str}')"`;
+        const title = openPlay ? 'title="Reserved for Open Play"' : full ? 'title="Fully booked"' : '';
         html += `<div class="cal-d-wrap"><div class="${cls}" ${click} ${title}>${d}</div></div>`;
     }
 
@@ -2771,10 +2782,12 @@ let opName        = '';
 let opPhone       = '';
 let opPayment     = '';
 let opReceiptFile = null;
+// let opSkillLevel  = ''; // reserved for future category use
 let opSkillLevel  = '';
 
 function confirmBooking() {
     if (selStart === -1 || !selDate) return;
+    if (openPlayDates.has(selDate)) return;
     wizardStep    = 0;
     bookingName   = '';
     bookingPhone  = '';
@@ -3143,7 +3156,7 @@ function downloadOpReceipt(name, queueNumber) {
         ['Time',         s ? `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}` : '', false],
         ['Player Name',  name,                                                          false],
         ['Contact',      opPhone,                                                       false],
-        ['Skill Level',  opSkillLevel,                                                  false],
+        // ['Skill Level', opSkillLevel, false], // reserved for future category use
         ['Player #',     queueNumber ? `#${queueNumber}` : '—',                        false],
         ['Payment',      opPayment,                                                     false],
     ];
@@ -3361,14 +3374,20 @@ async function fetchOpenPlay() {
     try {
         const { data } = await db.from('open_play_sessions')
             .select('*')
-            .eq('is_enabled', true)
-            .limit(1);
+            .eq('is_enabled', true);
         if (data && data.length > 0) {
-            openPlaySession = data[0];
-            const { count } = await db.from('open_play_queue')
-                .select('id', { count: 'exact', head: true })
-                .eq('session_id', openPlaySession.id);
-            openPlayRegCount = count || 0;
+            openPlayDates = new Set(data.map(s => s.date));
+            const today = toDateStr(new Date());
+            const todaySession = data.find(s => s.date >= today);
+            if (todaySession) {
+                openPlaySession = todaySession;
+                const { count } = await db.from('open_play_queue')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('session_id', openPlaySession.id);
+                openPlayRegCount = count || 0;
+            }
+        } else {
+            openPlayDates = new Set();
         }
     } catch(e) { /* silently skip */ }
 }
@@ -3537,6 +3556,7 @@ function openOpWizard() {
     const titleEl = document.getElementById('modal-header-title');
     if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> Join Open Play`;
     document.getElementById('modal').classList.add('show');
+    history.pushState({ page: 'openplay-wizard', step: 0 }, '');
     opRenderWizard();
 }
 
@@ -3600,11 +3620,14 @@ function opRenderStepContent() {
                        maxlength="11"/>
                 <div class="hint">Enter your 11-digit Philippine mobile number.</div>
             </div>
+            `;
+        /* Skill Level / Category section — reserved for future use
+        body.innerHTML += `
             <div class="phone-field" style="margin-top:1rem;">
                 <label>Skill Level</label>
                 <div style="display:flex;gap:0.6rem;margin-top:0.4rem;flex-wrap:wrap;">
-                    ${['beginner','intermediate','advanced'].map(level => `
-                        <button type="button"
+                    ${['beginner','intermediate','advanced'].map(level =>
+                        `<button type="button"
                             onclick="opSkillLevel='${level}'; opRenderWizard()"
                             style="flex:1;min-width:80px;padding:0.55rem 0.5rem;border-radius:10px;
                                    border:2px solid ${opSkillLevel===level ? 'var(--green-dark)' : 'var(--border)'};
@@ -3617,6 +3640,7 @@ function opRenderStepContent() {
                 </div>
                 <div class="hint">Select the level that best describes your play style.</div>
             </div>`;
+        */
         setTimeout(() => document.getElementById('op-name-input')?.focus(), 50);
 
     } else if (opWizardStep === 2) {
@@ -3678,7 +3702,7 @@ function opRenderFooter() {
         next.disabled    = !opReceiptFile;
     } else {
         next.innerHTML = 'Next &#8594;';
-        next.disabled  = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 || !opSkillLevel) : false;
+        next.disabled  = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 /* || !opSkillLevel — category check reserved */) : false;
     }
 }
 
@@ -3686,6 +3710,7 @@ async function opWizardNext() {
     if (opWizardStep === 3) { await finishOpRegistration(); return; }
     if (opWizardStep === 2) opReceiptFile = null;
     opWizardStep++;
+    history.pushState({ page: 'openplay-wizard', step: opWizardStep }, '');
     opRenderWizard();
 }
 
@@ -3723,7 +3748,7 @@ async function finishOpRegistration() {
             session_id:  openPlaySession.id,
             player_name: opName,
             mobile:      opPhone,
-            skill_level: opSkillLevel,
+            // skill_level: opSkillLevel, // reserved for future category use
             is_guest:    true,
         }).select('queue_number').single();
         if (error) throw error;
