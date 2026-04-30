@@ -1119,25 +1119,57 @@
         /* ══════════════════════════════════════
            ANNOUNCEMENT BANNER
         ══════════════════════════════════════ */
+        #main-announcement, #booking-announcement {
+            display: flex;
+            justify-content: center;
+            padding: 0 1rem;
+            margin-bottom: 1.25rem;
+        }
         .announcement-banner {
-            background: #fef2f2;
-            border-left: 4px solid #c0392b;
-            border-radius: 8px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f0 100%);
+            border: 1px solid rgba(192,57,43,0.18);
+            border-radius: 14px;
+            padding: 0.85rem 1.2rem;
+            max-width: 680px;
+            width: 100%;
+            box-shadow: 0 2px 12px rgba(192,57,43,0.08), 0 1px 3px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+        .announcement-banner::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: linear-gradient(180deg, #e74c3c, #c0392b);
+            border-radius: 14px 0 0 14px;
+        }
+        .announcement-banner-icon {
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .announcement-banner-body {
+            flex: 1;
+            text-align: left;
         }
         .announcement-banner h3 {
             color: #c0392b;
-            margin: 0 0 0.35rem 0;
-            font-size: 1.2rem;
+            margin: 0 0 0.2rem 0;
+            font-size: 0.78rem;
             font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
         .announcement-banner p {
-            color: #c0392b;
+            color: #7f1d1d;
             margin: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            line-height: 1.5;
+            font-size: 0.82rem;
+            font-weight: 500;
+            line-height: 1.55;
         }
 
         /* Locked slot */
@@ -1238,9 +1270,9 @@
         .slot-flash { animation: slot-flash 0.7s ease-out; }
 
         @media (max-width: 600px) {
-            .announcement-banner { padding: 0.75rem 1rem; margin-bottom: 1rem; }
-            .announcement-banner h3 { font-size: 0.9rem; }
-            .announcement-banner p { font-size: 0.82rem; }
+            .announcement-banner { padding: 0.7rem 1rem; gap: 0.55rem; }
+            .announcement-banner h3 { font-size: 0.72rem; }
+            .announcement-banner p { font-size: 0.78rem; }
         }
 
         /* ─── Mode Screen ─── */
@@ -2042,8 +2074,11 @@ async function fetchAnnouncement() {
         const a = data[0];
         const html = (a && a.is_visible && a.content)
             ? `<div class="announcement-banner">
-                   ${a.title ? `<h3>${a.title}</h3>` : ''}
-                   <p>${a.content}</p>
+                   <span class="announcement-banner-icon">📢</span>
+                   <div class="announcement-banner-body">
+                       ${a.title ? `<h3>${a.title}</h3>` : ''}
+                       <p>${a.content}</p>
+                   </div>
                </div>`
             : '';
         document.getElementById('main-announcement').innerHTML = html;
