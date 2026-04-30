@@ -1171,6 +1171,53 @@
             font-weight: 500;
             line-height: 1.55;
         }
+        .sched-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.35rem;
+        }
+        .sched-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.79rem;
+        }
+        .sched-day {
+            font-weight: 700;
+            color: #991b1b;
+            min-width: 72px;
+            flex-shrink: 0;
+        }
+        .sched-sep {
+            color: rgba(153,27,27,0.35);
+            font-size: 0.7rem;
+        }
+        .sched-time {
+            color: #7f1d1d;
+            font-weight: 500;
+        }
+        .sched-op-section {
+            margin-top: 0.6rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(192,57,43,0.15);
+        }
+        .sched-op-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: linear-gradient(90deg, #ec4899, #f97316);
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.18rem 0.55rem;
+            border-radius: 20px;
+            margin-bottom: 0.35rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .sched-row-op .sched-day  { color: #9d174d; }
+        .sched-row-op .sched-time { color: #831843; }
 
         /* Locked slot */
         .slot-locked {
@@ -2062,6 +2109,70 @@ if ('serviceWorker' in navigator) {
 const SUPABASE_URL = 'https://qzjaegutlsgtlaworbuy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Hy_hFyt_cdZkGV74qjbHlQ_L_gA18rb';
 
+function buildAnnouncementHtml(a) {
+    if (!a || !a.is_visible || !a.content) return '';
+    const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const splitRx = new RegExp(`(${DAYS.join('|')})\\s*[-–]\\s*`, 'gi');
+    const tokens = a.content.split(splitRx).map(s => s.trim()).filter(Boolean);
+
+    const entries = [];
+    for (let i = 0; i < tokens.length; i += 2) {
+        const day = tokens[i], sched = (tokens[i + 1] || '').trim();
+        if (DAYS.some(d => d.toLowerCase() === day.toLowerCase()) && sched)
+            entries.push({ day, sched });
+    }
+
+    const isOP = s => /open\s*play/i.test(s);
+    const regular  = entries.filter(e => !isOP(e.sched));
+    const openPlay = entries.filter(e =>  isOP(e.sched));
+
+    function groupBySchedule(arr) {
+        const map = new Map();
+        arr.forEach(({ day, sched }) => {
+            const key = sched.toLowerCase();
+            if (!map.has(key)) map.set(key, { display: sched, days: [] });
+            map.get(key).days.push(day);
+        });
+        return [...map.values()];
+    }
+
+    const dayOrder = d => DAYS.findIndex(x => x.toLowerCase() === d.toLowerCase());
+    const shortDay = d => d.slice(0, 3);
+    const normTime = s => s.replace(/open\s*play\s*/i, '').trim();
+
+    function renderRows(groups, extraCls = '') {
+        return groups.map(({ display, days }) => {
+            const sorted = [...days].sort((a, b) => dayOrder(a) - dayOrder(b));
+            return `<div class="sched-row${extraCls ? ' ' + extraCls : ''}">
+                <span class="sched-day">${sorted.map(shortDay).join(', ')}</span>
+                <span class="sched-sep">—</span>
+                <span class="sched-time">${normTime(display)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    const regGroups = groupBySchedule(regular);
+    const opGroups  = groupBySchedule(openPlay);
+
+    let body = '';
+    if (regGroups.length)
+        body += `<div class="sched-grid">${renderRows(regGroups)}</div>`;
+    if (opGroups.length)
+        body += `<div class="sched-op-section">
+            <span class="sched-op-badge">🏓 Open Play</span>
+            <div class="sched-grid">${renderRows(opGroups, 'sched-row-op')}</div>
+        </div>`;
+    if (!body) body = `<p>${a.content}</p>`;
+
+    return `<div class="announcement-banner">
+        <span class="announcement-banner-icon">📢</span>
+        <div class="announcement-banner-body">
+            ${a.title ? `<h3>${a.title}</h3>` : ''}
+            ${body}
+        </div>
+    </div>`;
+}
+
 async function fetchAnnouncement() {
     try {
         const res = await fetch(
@@ -2069,16 +2180,7 @@ async function fetchAnnouncement() {
             { headers: { 'apikey': SUPABASE_ANON_KEY } }
         );
         const data = await res.json();
-        const a = data[0];
-        const html = (a && a.is_visible && a.content)
-            ? `<div class="announcement-banner">
-                   <span class="announcement-banner-icon">📢</span>
-                   <div class="announcement-banner-body">
-                       ${a.title ? `<h3>${a.title}</h3>` : ''}
-                       <p>${a.content}</p>
-                   </div>
-               </div>`
-            : '';
+        const html = buildAnnouncementHtml(data[0]);
         document.getElementById('main-announcement').innerHTML = html;
         document.getElementById('booking-announcement').innerHTML = html;
     } catch (e) {
