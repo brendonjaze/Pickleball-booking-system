@@ -312,10 +312,10 @@
         .tag {
             background: var(--green-light);
             color: var(--green-dark);
-            padding: 0.25rem 0.75rem;
+            padding: 0.3rem 0.9rem;
             border-radius: 20px;
-            font-size: 0.73rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 900;
         }
         .court-price { font-size: 1.25rem; font-weight: 700; color: var(--pink); }
 
@@ -3202,12 +3202,14 @@ function downloadReceipt() {
 
     // Footer
     y += 30;
+    ctx.fillStyle = '#c0392b';
+    ctx.font      = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Please present this before entering court.', W/2, y);
+    y += 28;
     ctx.fillStyle = '#aaa';
     ctx.font      = '13px Arial';
-    ctx.textAlign = 'center';
     ctx.fillText('Thank you for booking with us!', W/2, y);
-    y += 22;
-    ctx.fillText('Please present this receipt at the facility.', W/2, y);
     y += 22;
     ctx.font = '11px Arial';
     ctx.fillText(`Generated: ${new Date().toLocaleString('en-PH')}`, W/2, y);
@@ -3308,9 +3310,10 @@ function downloadOpReceipt(name, queueNumber) {
     line(y); ctx.setLineDash([]);
 
     y += 30;
-    ctx.fillStyle = '#aaa'; ctx.font = '13px Arial'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#c0392b'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('Please present this before entering court.', W/2, y); y += 28;
+    ctx.fillStyle = '#aaa'; ctx.font = '13px Arial';
     ctx.fillText('Thank you for joining Open Play!', W/2, y); y += 22;
-    ctx.fillText('Please present this receipt at the facility.', W/2, y); y += 22;
     ctx.font = '11px Arial';
     ctx.fillText(`Generated: ${new Date().toLocaleString('en-PH')}`, W/2, y);
 
