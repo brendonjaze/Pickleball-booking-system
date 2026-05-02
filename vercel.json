@@ -1,4 +1,10 @@
 {
-    "buildCommand": "chmod +x ./node_modules/.bin/vite && vite build",
-    "outputDirectory": "dist"
+    "buildCommand": "echo 'Using pre-built dist'",
+    "outputDirectory": "dist",
+    "rewrites": [
+        {
+            "source": "/api/paymongo/:path*",
+            "destination": "/api/paymongo"
+        }
+    ]
 }
