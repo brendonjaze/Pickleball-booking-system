@@ -1,4 +1,5 @@
 {
-    "buildCommand": "npx vite@5 build",
-    "outputDirectory": "dist"
+    "buildCommand": "echo 'Skipping build - using pre-built dist'",
+    "outputDirectory": "dist",
+    "installCommand": "echo 'No install needed'"
 }
