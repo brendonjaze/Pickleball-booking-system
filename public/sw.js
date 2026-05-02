@@ -25,6 +25,11 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network-only for API calls (Never cache payments)
+  if (e.request.url.includes('/api/')) {
+    return; // Let the browser handle it normally
+  }
+
   // Network-first for Supabase API calls
   if (e.request.url.includes('supabase.co')) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
