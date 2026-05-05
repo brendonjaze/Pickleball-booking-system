@@ -4056,74 +4056,21 @@
                 ${label}
             </button>`;
 
-                if (bookingPayment === 'QRPh (GCash/Maya/ShopeePay)') {
-                    body.innerHTML = `
+                body.innerHTML = `
                 <div style="text-align:center;padding:1.5rem 1rem;">
-                    <div style="font-size:3rem;margin-bottom:1rem;">💳</div>
-                    <p style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">
-                        You've selected <strong>QRPh</strong>. You can pay using GCash, Maya, or any QRPh-compatible app.
+                    <div style="font-size:3rem;margin-bottom:0.75rem;">🚶</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Walk-in Payment</div>
+                    <p style="font-size:0.88rem;color:#555;line-height:1.6;margin-bottom:1.25rem;">
+                        Pay at the venue <strong>before your session starts</strong>.<br>Present your name to the staff on arrival.
                     </p>
-                    
-                    <button onclick="payWithPaymongo()" id="paymongo-btn" style="
-                        background: #3b82f6; color: white; border: none; border-radius: 12px;
-                        padding: 1rem 2rem; font-size: 1rem; font-weight: 700; cursor: pointer;
-                        box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
-                        display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-                        width: 100%; transition: transform 0.2s; font-family: 'Montserrat', sans-serif;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                        Proceed to Payment
-                    </button>
-                    
-                    <div style="margin-top:2rem; font-size:0.8rem; color:#888;">
-                        Total to pay: <span style="font-weight:700; color:var(--green-dark);">₱${amount.toLocaleString()}</span>
+                    <div style="background:#f0faf3;border:2px solid var(--green-dark);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.25rem;">
+                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Total amount to pay at venue</div>
+                        <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${amount.toLocaleString()}</div>
                     </div>
-                    <p style="font-size:0.75rem;color:#aaa;margin-top:1rem;">* After payment, please save your receipt for verification.</p>
-                </div>
-            `;
-                } else {
-                    const qrFiles = { 'GCash': 'qr-gcash.png' };
-                    const qrFile = qrFiles[bookingPayment];
-
-                    body.innerHTML = `
-                <div style="text-align:center;margin-bottom:1rem;">
-                    <p style="font-size:0.88rem;color:#555;margin-bottom:0.75rem;">
-                        Scan the QR code below to pay via <strong>${bookingPayment}</strong>
-                    </p>
-                    <div style="display:inline-block;padding:12px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;margin-bottom:0.65rem;">
-                        <div id="qr-svg-wrap">
-                            <img src="${qrFile}" alt="${bookingPayment} QR Code"
-                                 onclick="openQR(this)"
-                                 style="width:180px;height:180px;object-fit:contain;display:block;cursor:zoom-in;"/>
-                        </div>
+                    <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#856404;line-height:1.5;">
+                        ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
                     </div>
-                    <br>
-                    <button onclick="downloadQR()" style="
-                        display:inline-flex;align-items:center;gap:0.4rem;
-                        background:none;border:1.5px solid var(--green-dark);
-                        color:var(--green-dark);border-radius:8px;
-                        padding:0.45rem 1rem;font-size:0.8rem;font-weight:600;
-                        cursor:pointer;font-family:'Montserrat',sans-serif;
-                        margin-bottom:0.75rem;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Download QR Code
-                    </button>
-                    <div style="font-size:1.5rem;font-weight:800;color:var(--green-dark);margin-bottom:0.2rem;">₱${amount.toLocaleString()}</div>
-                    <div style="font-size:0.8rem;color:#888;margin-bottom:0.5rem;">Amount to pay</div>
-                    ${dlBtn('Download Backup Receipt')}
-                </div>
-                <div class="receipt-upload" id="receipt-upload-wrap">
-                    <label class="receipt-label">Upload ${bookingPayment} Payment Screenshot</label>
-                    <div class="receipt-drop" onclick="document.getElementById('receipt-file').click()">
-                        <div id="receipt-preview-wrap">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <div style="font-size:0.82rem;color:#aaa;margin-top:0.4rem;">Click to upload screenshot</div>
-                        </div>
-                    </div>
-                    <input type="file" id="receipt-file" accept="image/*" style="display:none"
-                           onchange="handleReceiptUpload(this)"/>
-                    <div class="receipt-hint">JPG, PNG accepted</div>
                 </div>`;
-                }
             }
         }
 
@@ -4413,11 +4360,10 @@
 
             if (wizardStep === 3) {
                 next.textContent = 'Done';
-                next.disabled = !receiptFile;
+                next.disabled = false;
             } else {
                 next.innerHTML = 'Next &#8594;';
                 if (wizardStep === 1) next.disabled = bookingName.length < 2 || bookingPhone.length < 10;
-                else if (wizardStep === 2) next.disabled = !bookingPayment;
                 else next.disabled = false;
             }
         }
@@ -4469,7 +4415,17 @@
                                 }],
                                 payment_method_types: ['gcash', 'paymaya', 'qrph'],
                                 success_url: window.location.origin + '?payment=success',
-                                cancel_url: window.location.origin + '?payment=cancel'
+                                cancel_url: window.location.origin + '?payment=cancel',
+                                metadata: {
+                                    type: 'court',
+                                    court_id: String(curCourt.id),
+                                    date: selDate,
+                                    slots_json: JSON.stringify(slots),
+                                    player_name: bookingName,
+                                    mobile: bookingPhone,
+                                    payment_method: bookingPayment,
+                                    booking_ref: bookingRef
+                                }
                             }
                         }
                     })
@@ -4521,7 +4477,15 @@
                                 }],
                                 payment_method_types: ['gcash', 'paymaya', 'qrph'],
                                 success_url: window.location.origin + '?payment=success',
-                                cancel_url: window.location.origin + '?payment=cancel'
+                                cancel_url: window.location.origin + '?payment=cancel',
+                                metadata: {
+                                    type: 'openplay',
+                                    session_id: String(s.id),
+                                    player_name: opName,
+                                    mobile: opPhone,
+                                    skill_level: opSkillLevel || 'beginner',
+                                    booking_ref: bookingRef
+                                }
                             }
                         }
                     })
@@ -4544,8 +4508,7 @@
             if (wizardStep === 3) { await finishBooking(); return; }
 
             if (wizardStep === 1) {
-                // Skip the selection step (step 2) and go straight to Payment (step 3)
-                bookingPayment = 'QRPh (GCash/Maya/ShopeePay)';
+                bookingPayment = 'Walk-in (Pay at venue)';
                 wizardStep = 3;
             } else {
                 wizardStep++;
@@ -5084,37 +5047,31 @@
                 body.innerHTML = `
             <p style="font-size:0.88rem;color:#555;margin-bottom:1rem;">Select your payment method:</p>
             <div class="pay-options">
-                ${[['💳', 'QRPh (GCash/Maya/ShopeePay)']].map(([icon, label]) => `
-                    <div class="pay-item ${opPayment === label ? 'active' : ''}" 
+                ${[['💳', 'QRPh (GCash/Maya/ShopeePay)'], ['🚶', 'Walk-in (Pay at venue)']].map(([icon, label]) => `
+                    <div class="pay-option ${opPayment === label ? 'pay-sel' : ''}"
                          onclick="opPayment='${label}'; opRenderWizard()">
                          <span class="pay-icon">${icon}</span> ${label}
                     </div>`).join('')}
             </div>`;
 
             } else if (opWizardStep === 3) {
-                if (opPayment === 'QRPh (GCash/Maya/ShopeePay)') {
+                {
                     body.innerHTML = `
                 <div style="text-align:center;padding:1.5rem 1rem;">
-                    <div style="font-size:3rem;margin-bottom:1rem;">💳</div>
-                    <p style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">
-                        You've selected <strong>QRPh</strong>. You can pay using GCash, Maya, or any QRPh-compatible app.
+                    <div style="font-size:3rem;margin-bottom:0.75rem;">🚶</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Walk-in Payment</div>
+                    <p style="font-size:0.88rem;color:#555;line-height:1.6;margin-bottom:1.25rem;">
+                        Pay at the venue <strong>before play starts</strong>.<br>Present your name to the staff on arrival.
                     </p>
-                    
-                    <button onclick="payWithPaymongoOp()" id="paymongo-op-btn" style="
-                        background: #3b82f6; color: white; border: none; border-radius: 12px;
-                        padding: 1rem 2rem; font-size: 1rem; font-weight: 700; cursor: pointer;
-                        box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
-                        display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-                        width: 100%; transition: transform 0.2s; font-family: 'Montserrat', sans-serif;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                        Proceed to Payment
-                    </button>
-                    
-                    <div style="margin-top:2rem; font-size:0.8rem; color:#888;">
-                        Total to pay: <span style="font-weight:700; color:var(--green-dark);">₱${Number(amount).toLocaleString()}</span>
+                    <div style="background:#f0faf3;border:2px solid var(--green-dark);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.25rem;">
+                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Amount to pay at venue</div>
+                        <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${Number(amount).toLocaleString()}</div>
+                        <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">Per player</div>
                     </div>
-                </div>
-            `;
+                    <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#856404;line-height:1.5;">
+                        ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
+                    </div>
+                </div>`;
                 } else {
                     const qrFiles = { 'GCash': 'qr-gcash.png' };
                     body.innerHTML = `
@@ -5160,8 +5117,10 @@
             prev.disabled = opWizardStep === 0;
             if (opWizardStep === 3) {
                 next.textContent = 'Done';
-                next.disabled = !opReceiptFile;
+                next.style.display = '';
+                next.disabled = false;
             } else {
+                next.style.display = '';
                 next.innerHTML = 'Next &#8594;';
                 next.disabled = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 || !opSkillLevel) : false;
             }
@@ -5169,15 +5128,12 @@
 
         async function opWizardNext() {
             if (opWizardStep === 3) { await finishOpRegistration(); return; }
-
             if (opWizardStep === 1) {
-                // Skip the selection step (step 2) and go straight to Payment (step 3)
-                opPayment = 'QRPh (GCash/Maya/ShopeePay)';
+                opPayment = 'Walk-in (Pay at venue)';
                 opWizardStep = 3;
             } else {
                 opWizardStep++;
             }
-
             history.pushState({ page: 'openplay-wizard', step: opWizardStep }, '');
             opRenderWizard();
         }
@@ -5195,13 +5151,7 @@
 
         function opWizardPrev() {
             if (opWizardStep === 0) return;
-
-            if (opWizardStep === 3) {
-                // Go back to details (step 1)
-                opWizardStep = 1;
-            } else {
-                opWizardStep--;
-            }
+            opWizardStep = opWizardStep === 3 ? 1 : opWizardStep - 1;
             opRenderWizard();
         }
 
