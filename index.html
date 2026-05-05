@@ -4150,7 +4150,7 @@
                         <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Total amount to pay at venue</div>
                         <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${amount.toLocaleString()}</div>
                     </div>
-                    <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#856404;line-height:1.5;">
+                    <div style="background:#fff0f0;border:1.5px solid #e53e3e;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#c00;line-height:1.5;">
                         ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
                     </div>
                 </div>`;
@@ -5199,7 +5199,7 @@
                         <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${Number(amount).toLocaleString()}</div>
                         <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">Per player</div>
                     </div>
-                    <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#856404;line-height:1.5;">
+                    <div style="background:#fff0f0;border:1.5px solid #e53e3e;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#c00;line-height:1.5;">
                         ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
                     </div>
                 </div>`;
@@ -5293,7 +5293,8 @@
                         You've joined the Open Play session.<br>See you on the court, <strong>${opName}</strong>!
                     </div>
                     <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.25rem;text-align:center;">PLEASE DOWNLOAD AND PRESENT THIS BEFORE ENTERING</div>
-                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.75rem;text-align:center;">ANG DILI MUSIPOT AUTOMATIC BAN SA COURT!</div>
+                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.25rem;text-align:center;">ANG DILI MUSIPOT AUTOMATIC BAN MUNA SA COURT!</div>
+                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.75rem;text-align:center;">BE RESPONSIBLE!</div>
                     <button onclick="downloadOpReceipt('${opName.replace(/'/g, "\\'")}', ${queueNumber || 'null'}); setTimeout(() => { closeModal(); renderFormArea('${opName.replace(/'/g, "\\'")}', null); }, 400);" style="
                         display:inline-flex;align-items:center;gap:0.5rem;
                         background:var(--green-dark);color:#fff;border:none;border-radius:10px;
