@@ -5242,17 +5242,12 @@
                 <div style="text-align:center;padding:1.5rem 1rem;">
                     <div style="font-size:2.5rem;margin-bottom:0.5rem;">\ud83c\udf89</div>
                     <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.4rem;">You're In!</div>
-                    ${queueNumber ? `
-                    <div style="margin:0.75rem auto;background:var(--green-light);border:2px solid var(--green-dark);border-radius:14px;display:inline-block;padding:0.5rem 1.5rem;">
-                        <div style="font-size:0.7rem;color:var(--green-dark);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Your Player Number</div>
-                        <div style="font-size:2rem;font-weight:800;color:var(--green-dark);line-height:1.2;">#${queueNumber}</div>
-                    </div>` : ''}
                     <div style="font-size:0.84rem;color:#555;line-height:1.6;margin:0.6rem 0 1rem;">
                         You've joined the Open Play session.<br>See you on the court, <strong>${opName}</strong>!
-                        ${queueNumber ? `<br><span style="color:var(--green-dark);font-weight:600;">Listen for your number on the TV display.</span>` : ''}
                     </div>
-                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.5rem;text-align:center;">PLEASE DOWNLOAD AND PRESENT THIS BEFORE ENTERING</div>
-                    <button onclick="downloadOpReceipt('${opName.replace(/'/g, "\\'")}', ${queueNumber || 'null'})" style="
+                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.25rem;text-align:center;">PLEASE DOWNLOAD AND PRESENT THIS BEFORE ENTERING</div>
+                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.75rem;text-align:center;">ANG DILI MUSIPOT AUTOMATIC BAN SA COURT!</div>
+                    <button onclick="downloadOpReceipt('${opName.replace(/'/g, "\\'")}', ${queueNumber || 'null'}); setTimeout(() => { closeModal(); renderFormArea('${opName.replace(/'/g, "\\'")}', null); }, 400);" style="
                         display:inline-flex;align-items:center;gap:0.5rem;
                         background:var(--green-dark);color:#fff;border:none;border-radius:10px;
                         padding:0.7rem 1.3rem;font-size:0.85rem;font-weight:700;
@@ -5264,8 +5259,10 @@
                 }
                 const prev = document.getElementById('btn-prev');
                 const next = document.getElementById('btn-next');
+                const cancel = document.querySelector('.btn-cancel');
                 if (prev) prev.style.display = 'none';
-                if (next) { next.textContent = 'Close'; next.disabled = false; next.onclick = () => { closeModal(); renderFormArea(opName, queueNumber); next.onclick = null; }; }
+                if (next) next.style.display = 'none';
+                if (cancel) cancel.style.display = 'none';
             } catch (e) {
                 btn.disabled = false;
                 btn.textContent = 'Done';
