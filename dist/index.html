@@ -2637,7 +2637,7 @@
                 <h2 class="mode-title">How would you<br>like to play?</h2>
                 <p class="mode-subtitle">Choose your game mode for today</p>
                 <div class="mode-cards">
-                    <button class="mode-card open-play-card" onclick="showOpenPlay()">
+                    <button class="mode-card open-play-card" id="mode-op-btn" onclick="showOpenPlay()">
                         <div class="mode-card-icon">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--pink)"
                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2648,7 +2648,7 @@
                             </svg>
                         </div>
                         <div class="mode-card-title">Open Play</div>
-                        <div class="mode-card-desc" id="mode-op-desc">Join today's session</div>
+                        <div class="mode-card-desc">Join today's session</div>
                         <span class="mode-card-pill">Sign up now</span>
                     </button>
                     <button class="mode-card book-court-card" onclick="showMainFromMode()">
@@ -2822,7 +2822,7 @@
                     </svg>
                     Complete Your Booking
                 </div>
-                <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+                <!-- X button removed for booking success modal -->
             </div>
 
             <!-- Steps -->
@@ -3100,6 +3100,8 @@
         let courtTodayStatus = {};        // court_id → 'available' | 'full'
         let openPlaySession = null;
         let openPlayRegCount = 0;
+        let openPlaySessions = {};    // keyed by session_type: 'morning' | 'night'
+        let openPlayRegCounts = {};   // keyed by session_type
 
         // ── Unregister stale service workers from other projects ──
         if ('serviceWorker' in navigator) {
@@ -3296,13 +3298,10 @@
             document.getElementById('app').style.display = 'block';
             renderCourts();
 
-            if (openPlaySession) {
+            const hasOpenPlay = openPlaySessions.morning || openPlaySessions.night;
+            if (hasOpenPlay) {
                 document.getElementById('main-page').style.display = 'none';
                 document.getElementById('mode-screen').style.display = 'block';
-                const descEl = document.getElementById('mode-op-desc');
-                if (descEl && openPlaySession.start_time && openPlaySession.end_time) {
-                    descEl.textContent = `${fmtTime(openPlaySession.start_time)} \u2013 ${fmtTime(openPlaySession.end_time)}`;
-                }
             }
 
             // Wait for court animation to finish before hiding loading screen
@@ -3310,7 +3309,7 @@
 
             const ls = document.getElementById('loading-screen');
             const flyingLogo = document.getElementById('flying-logo');
-            const logoSelector = openPlaySession ? '#mode-screen .header-img-logo' : '#main-page .header-img-logo';
+            const logoSelector = hasOpenPlay ? '#mode-screen .header-img-logo' : '#main-page .header-img-logo';
             const headerLogo = document.querySelector(logoSelector);
             const rect = headerLogo.getBoundingClientRect();
 
@@ -3536,6 +3535,12 @@
                 opRenderWizard();
                 return;
             }
+            if (e.state?.page === 'openplay-pick') {
+                document.getElementById('open-play-screen').style.display = 'block';
+                document.getElementById('mode-screen').style.display = 'none';
+                renderSessionPicker();
+                return;
+            }
             if (document.getElementById('modal').classList.contains('show') && wizardMode === 'openplay') {
                 closeModal();
                 return;
@@ -3547,9 +3552,9 @@
                 } else {
                     showMain();
                 }
-            } else if (openPlaySession && document.getElementById('open-play-screen').style.display === 'block') {
+            } else if ((openPlaySessions.morning || openPlaySessions.night) && document.getElementById('open-play-screen').style.display === 'block') {
                 showModeScreen();
-            } else if (openPlaySession && document.getElementById('main-page').style.display === 'block') {
+            } else if ((openPlaySessions.morning || openPlaySessions.night) && document.getElementById('main-page').style.display === 'block') {
                 showModeScreen();
             }
         });
@@ -3923,6 +3928,7 @@
         let opReceiptFile = null;
         // let opSkillLevel  = ''; // reserved for future category use
         let opSkillLevel = '';
+        let opSelectedSessionType = null; // 'morning' | 'night' — locked at session pick time
 
         function confirmBooking() {
             if (selStart === -1 || !selDate) return;
@@ -4413,6 +4419,20 @@
             const amount = slots.length * curCourt.price_per_hour;
             const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
 
+            // Store booking data in sessionStorage BEFORE redirecting to PayMongo
+            // This allows us to retrieve it after the payment redirect
+            sessionStorage.setItem('pendingBooking', JSON.stringify({
+                type: 'court',
+                bookingRef: bookingRef,
+                courtId: curCourt.id,
+                date: selDate,
+                slots: slots,
+                name: bookingName,
+                phone: bookingPhone,
+                paymentMethod: bookingPayment,
+                receiptUrl: null
+            }));
+
             const btn = document.getElementById('paymongo-btn');
             btn.disabled = true;
             btn.textContent = 'Preparing Checkout...';
@@ -4461,7 +4481,7 @@
             }
         }
         async function payWithPaymongoOp() {
-            const s = openPlaySession;
+            const s = (opSelectedSessionType && openPlaySessions[opSelectedSessionType]) || openPlaySession;
             if (!s) return;
             const amount = s.price_per_player;
             const bookingRef = window._opBookingRef || ('OPR-' + Date.now().toString(36).toUpperCase());
@@ -4653,6 +4673,7 @@
                     <span style="color:var(--green-dark);font-weight:600;">${curCourt?.name || 'Court'}</span> &nbsp;·&nbsp; ${dateStr}<br>
                     ${timeStr}
                 </div>
+                <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.5rem;text-align:center;">PLEASE DOWNLOAD AND PRESENT THIS BEFORE ENTERING</div>
                 <button onclick="downloadReceipt()" style="
                     display:inline-flex;align-items:center;gap:0.5rem;
                     background:var(--green-dark);color:#fff;border:none;border-radius:10px;
@@ -4665,20 +4686,12 @@
             }
             const prevBtn = document.getElementById('btn-prev');
             const nextBtn = document.getElementById('btn-next');
+            const footer = document.querySelector('.modal-footer');
             if (prevBtn) prevBtn.style.display = 'none';
-            if (nextBtn) {
-                nextBtn.textContent = 'Close';
-                nextBtn.disabled = false;
-                nextBtn.onclick = async () => {
-                    closeModal();
-                    receiptFile = null;
-                    selStart = -1; selEnd = -1;
-                    await fetchBookedSlots();
-                    updateConfirm();
-                    fetchFullyBookedDates();
-                    nextBtn.onclick = null;
-                };
-            }
+            if (nextBtn) nextBtn.style.display = 'none';
+            // Hide the Cancel button too
+            const cancelBtn = document.querySelector('.btn-cancel');
+            if (cancelBtn) cancelBtn.style.display = 'none';
         }
 
         function closeConflictModal() {
@@ -4708,18 +4721,60 @@
                 if (data && data.length > 0) {
                     openPlayDates = new Set(data.map(s => s.date));
                     const today = toDateStr(new Date());
-                    const todaySession = data.find(s => s.date >= today);
-                    if (todaySession) {
-                        openPlaySession = todaySession;
-                        const { count } = await db.from('open_play_queue')
-                            .select('id', { count: 'exact', head: true })
-                            .eq('session_id', openPlaySession.id);
-                        openPlayRegCount = count || 0;
-                    }
+                    openPlaySessions = {};
+                    openPlayRegCounts = {};
+                    await Promise.all(data
+                        .filter(s => s.date >= today)
+                        .map(async s => {
+                            const type = s.session_type || 'morning';
+                            openPlaySessions[type] = s;
+                            const { count } = await db.from('open_play_queue')
+                                .select('id', { count: 'exact', head: true })
+                                .eq('session_id', s.id);
+                            openPlayRegCounts[type] = count || 0;
+                        })
+                    );
+                    // Keep openPlaySession pointing to first available for backward compat
+                    openPlaySession = openPlaySessions.morning || openPlaySessions.night || null;
+                    openPlayRegCount = openPlaySession
+                        ? (openPlayRegCounts[openPlaySession.session_type] || 0)
+                        : 0;
                 } else {
                     openPlayDates = new Set();
+                    openPlaySessions = {};
+                    openPlayRegCounts = {};
                 }
             } catch (e) { /* silently skip */ }
+        }
+
+        function renderModeOpenPlayCards() {
+            const container = document.getElementById('mode-open-play-cards');
+            if (!container) return;
+            const sessions = [
+                { type: 'morning', label: 'Morning Open Play', icon: '🌅' },
+                { type: 'night',   label: 'Night Open Play',   icon: '🌙' },
+            ];
+            container.innerHTML = sessions
+                .filter(({ type }) => openPlaySessions[type])
+                .map(({ type, label, icon }) => {
+                    const s = openPlaySessions[type];
+                    const desc = `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
+                    return `<button class="mode-card open-play-card" onclick="showOpenPlay('${type}')">
+                        <div class="mode-card-icon">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--pink)"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 010 7.75"/>
+                            </svg>
+                        </div>
+                        <div class="mode-card-title">${icon} ${label}</div>
+                        <div class="mode-card-desc">${desc}</div>
+                        <span class="mode-card-pill">Sign up now</span>
+                    </button>`;
+                })
+                .join('');
         }
 
         function fmtTime(t) {
@@ -4751,13 +4806,59 @@
             history.pushState({ page: 'main' }, '');
         }
 
-        function showOpenPlay() {
+        function showOpenPlay(type) {
             document.getElementById('mode-screen').style.display = 'none';
             document.getElementById('open-play-screen').style.display = 'block';
             window.scrollTo(0, 0);
-            history.pushState({ page: 'openplay' }, '');
-            renderSessionCard();
-            renderFormArea();
+
+            const hasBoth = openPlaySessions.morning && openPlaySessions.night;
+            if (!type && hasBoth) {
+                history.pushState({ page: 'openplay-pick' }, '');
+                renderSessionPicker();
+            } else {
+                const t = type || (openPlaySessions.morning ? 'morning' : 'night');
+                opSelectedSessionType = t;
+                openPlaySession = openPlaySessions[t];
+                openPlayRegCount = openPlayRegCounts[t] || 0;
+                history.pushState({ page: 'openplay' }, '');
+                renderSessionCard();
+                renderFormArea();
+            }
+        }
+
+        function renderSessionPicker() {
+            const sessions = [
+                { type: 'morning', label: 'Morning Open Play', icon: '🌅' },
+                { type: 'night',   label: 'Night Open Play',   icon: '🌙' },
+            ];
+            document.getElementById('op-session-card').innerHTML = `
+                <div style="font-size:1.1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.25rem;">Choose a Session</div>
+                <p style="font-size:0.85rem;color:#777;margin:0 0 1rem;">Select which open play session you'd like to join.</p>`;
+            document.getElementById('op-form-area').innerHTML = sessions
+                .filter(({ type }) => openPlaySessions[type])
+                .map(({ type, label, icon }) => {
+                    const s = openPlaySessions[type];
+                    const regCount = openPlayRegCounts[type] || 0;
+                    const spotsLeft = s.max_players - regCount;
+                    const isFull = spotsLeft <= 0;
+                    const badgeClass = isFull ? 'spots-full' : spotsLeft <= 3 ? 'spots-low' : 'spots-ok';
+                    const badgeText = isFull ? 'Session Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
+                    return `<button onclick="showOpenPlay('${type}')" style="
+                        width:100%;text-align:left;background:#fff;border:2px solid #e8e8f0;
+                        border-radius:16px;padding:1.1rem 1.2rem;margin-bottom:0.75rem;
+                        cursor:pointer;font-family:'Montserrat',sans-serif;
+                        transition:border-color 0.18s,box-shadow 0.18s;
+                        display:flex;align-items:center;justify-content:space-between;gap:0.75rem;"
+                        onmouseover="this.style.borderColor='var(--pink)';this.style.boxShadow='0 2px 12px rgba(236,72,153,0.12)'"
+                        onmouseout="this.style.borderColor='#e8e8f0';this.style.boxShadow='none'">
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.2rem;">${icon} ${label}</div>
+                            <div style="font-size:0.82rem;color:#666;">${fmtTime(s.start_time)} &ndash; ${fmtTime(s.end_time)} &nbsp;·&nbsp; &#8369;${s.price_per_player}</div>
+                        </div>
+                        <span class="op-spots-badge ${badgeClass}" style="white-space:nowrap;flex-shrink:0;">${badgeText}</span>
+                    </button>`;
+                })
+                .join('');
         }
 
         function renderSessionCard() {
@@ -5108,12 +5209,14 @@
         }
 
         async function finishOpRegistration() {
+            const activeSession = (opSelectedSessionType && openPlaySessions[opSelectedSessionType])
+                || openPlaySession;
             const btn = document.getElementById('btn-next');
             btn.disabled = true;
             btn.textContent = 'Saving\u2026';
             try {
                 const { data: inserted, error } = await db.from('open_play_queue').insert({
-                    session_id: openPlaySession.id,
+                    session_id: activeSession.id,
                     player_name: opName,
                     mobile: opPhone,
                     skill_level: 'beginner', // default; UI selection reserved for future use
@@ -5121,6 +5224,8 @@
                 }).select('queue_number').single();
                 if (error) throw error;
                 openPlayRegCount++;
+                if (opSelectedSessionType) openPlayRegCounts[opSelectedSessionType] = openPlayRegCount;
+                openPlaySession = activeSession;
                 renderSessionCard();
 
                 // Show success + download receipt inside the modal
@@ -5141,6 +5246,7 @@
                         You've joined the Open Play session.<br>See you on the court, <strong>${opName}</strong>!
                         ${queueNumber ? `<br><span style="color:var(--green-dark);font-weight:600;">Listen for your number on the TV display.</span>` : ''}
                     </div>
+                    <div style="font-size:0.85rem;font-weight:bold;color:#c00;margin-bottom:0.5rem;text-align:center;">PLEASE DOWNLOAD AND PRESENT THIS BEFORE ENTERING</div>
                     <button onclick="downloadOpReceipt('${opName.replace(/'/g, "\\'")}', ${queueNumber || 'null'})" style="
                         display:inline-flex;align-items:center;gap:0.5rem;
                         background:var(--green-dark);color:#fff;border:none;border-radius:10px;
