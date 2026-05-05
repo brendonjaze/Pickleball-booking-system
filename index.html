@@ -5182,27 +5182,24 @@
                        maxlength="11"/>
                 <div class="hint">Enter your 11-digit Philippine mobile number.</div>
             </div>
+            <div class="phone-field" style="margin-top:1rem;">
+                <label>Category</label>
+                <div style="display:flex;gap:0.6rem;margin-top:0.4rem;">
+                    ${['beginner','novice'].map(level =>
+                        `<button type="button"
+                            onclick="opSkillLevel='${level}'; opRenderWizard()"
+                            style="flex:1;padding:0.55rem 0.5rem;border-radius:10px;
+                                   border:2px solid ${opSkillLevel===level ? 'var(--green-dark)' : 'var(--border)'};
+                                   background:${opSkillLevel===level ? 'var(--green-light)' : '#fff'};
+                                   color:${opSkillLevel===level ? 'var(--green-dark)' : 'var(--gray)'};
+                                   font-family:'Montserrat',sans-serif;font-size:0.88rem;font-weight:${opSkillLevel===level ? '700' : '500'};
+                                   cursor:pointer;text-transform:capitalize;transition:all 0.15s;">
+                            ${level.charAt(0).toUpperCase()+level.slice(1)}
+                        </button>`).join('')}
+                </div>
+                <div class="hint">Select the category that best describes your play style.</div>
+            </div>
             `;
-                /* Skill Level / Category section — reserved for future use
-                body.innerHTML += `
-                    <div class="phone-field" style="margin-top:1rem;">
-                        <label>Skill Level</label>
-                        <div style="display:flex;gap:0.6rem;margin-top:0.4rem;flex-wrap:wrap;">
-                            ${['beginner','intermediate','advanced'].map(level =>
-                                `<button type="button"
-                                    onclick="opSkillLevel='${level}'; opRenderWizard()"
-                                    style="flex:1;min-width:80px;padding:0.55rem 0.5rem;border-radius:10px;
-                                           border:2px solid ${opSkillLevel===level ? 'var(--green-dark)' : 'var(--border)'};
-                                           background:${opSkillLevel===level ? 'var(--green-light)' : '#fff'};
-                                           color:${opSkillLevel===level ? 'var(--green-dark)' : 'var(--gray)'};
-                                           font-family:'Montserrat',sans-serif;font-size:0.8rem;font-weight:${opSkillLevel===level ? '700' : '500'};
-                                           cursor:pointer;text-transform:capitalize;transition:all 0.15s;">
-                                    ${level.charAt(0).toUpperCase()+level.slice(1)}
-                                </button>`).join('')}
-                        </div>
-                        <div class="hint">Select the level that best describes your play style.</div>
-                    </div>`;
-                */
                 setTimeout(() => document.getElementById('op-name-input')?.focus(), 50);
 
             } else if (opWizardStep === 2) {
@@ -5289,7 +5286,7 @@
                 next.disabled = !opReceiptFile;
             } else {
                 next.innerHTML = 'Next &#8594;';
-                next.disabled = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 /* || !opSkillLevel — category check reserved */) : false;
+                next.disabled = opWizardStep === 1 ? (opName.length < 2 || opPhone.length < 10 || !opSkillLevel) : false;
             }
         }
 
@@ -5351,7 +5348,7 @@
                     session_id: activeSession.id,
                     player_name: opName,
                     mobile: opPhone,
-                    skill_level: 'beginner', // default; UI selection reserved for future use
+                    skill_level: opSkillLevel,
                     is_guest: true,
                 }).select('queue_number').single();
                 if (error) throw error;
