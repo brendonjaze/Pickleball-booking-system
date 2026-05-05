@@ -3206,15 +3206,23 @@
                 const { maxMonth, maxYear } = getBookableRange();
                 const lastDay = new Date(maxYear, maxMonth + 1, 0).getDate();
                 const endDate = `${maxYear}-${String(maxMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-                const { data, error } = await db
-                    .from('court_locks')
-                    .select('*')
-                    .gte('date', today)
-                    .lte('date', endDate)
-                    .order('date', { ascending: true })
-                    .limit(5000);
-                if (error) { console.error('Court locks fetch error:', error); courtLocks = []; return; }
-                courtLocks = Array.isArray(data) ? data.map(normalizeLock) : [];
+                const PAGE = 1000;
+                let offset = 0;
+                let allLocks = [];
+                while (true) {
+                    const { data, error } = await db
+                        .from('court_locks')
+                        .select('*')
+                        .gte('date', today)
+                        .lte('date', endDate)
+                        .order('date', { ascending: true })
+                        .range(offset, offset + PAGE - 1);
+                    if (error) { console.error('Court locks fetch error:', error); courtLocks = []; return; }
+                    if (data && data.length > 0) allLocks = allLocks.concat(data);
+                    if (!data || data.length < PAGE) break;
+                    offset += PAGE;
+                }
+                courtLocks = allLocks.map(normalizeLock);
             } catch (e) {
                 console.error('Court locks fetch error:', e);
                 courtLocks = [];
