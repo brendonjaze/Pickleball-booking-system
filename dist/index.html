@@ -3102,6 +3102,7 @@
         let openPlayRegCount = 0;
         let openPlaySessions = {};    // keyed by session_type: 'morning' | 'night'
         let openPlayRegCounts = {};   // keyed by session_type
+        let openPlaySessionsList = []; // all future enabled sessions with regCount
 
         // ── Unregister stale service workers from other projects ──
         if ('serviceWorker' in navigator) {
@@ -3546,7 +3547,7 @@
             if (e.state?.page === 'openplay-pick') {
                 document.getElementById('open-play-screen').style.display = 'block';
                 document.getElementById('mode-screen').style.display = 'none';
-                renderSessionPicker();
+                renderAllSessionsList();
                 return;
             }
             if (document.getElementById('modal').classList.contains('show') && wizardMode === 'openplay') {
@@ -3560,9 +3561,9 @@
                 } else {
                     showMain();
                 }
-            } else if ((openPlaySessions.morning || openPlaySessions.night) && document.getElementById('open-play-screen').style.display === 'block') {
+            } else if (openPlaySessionsList.length > 0 && document.getElementById('open-play-screen').style.display === 'block') {
                 showModeScreen();
-            } else if ((openPlaySessions.morning || openPlaySessions.night) && document.getElementById('main-page').style.display === 'block') {
+            } else if (openPlaySessionsList.length > 0 && document.getElementById('main-page').style.display === 'block') {
                 showModeScreen();
             }
         });
@@ -4688,32 +4689,41 @@
             try {
                 const { data } = await db.from('open_play_sessions')
                     .select('*')
-                    .eq('is_enabled', true);
+                    .eq('is_enabled', true)
+                    .is('deleted_at', null)
+                    .order('date', { ascending: true })
+                    .order('start_time', { ascending: true });
                 if (data && data.length > 0) {
                     openPlayDates = new Set(data.map(s => s.date));
                     const today = toDateStr(new Date());
+                    const future = data.filter(s => s.date >= today);
+                    const countResults = await Promise.all(future.map(async s => {
+                        const { count } = await db.from('open_play_queue')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('session_id', s.id);
+                        return { id: s.id, count: count || 0 };
+                    }));
+                    openPlaySessionsList = future.map(s => {
+                        const c = countResults.find(r => r.id === s.id);
+                        return { ...s, regCount: c ? c.count : 0 };
+                    });
+                    // Backward compat: keep openPlaySessions keyed by type
                     openPlaySessions = {};
                     openPlayRegCounts = {};
-                    await Promise.all(data
-                        .filter(s => s.date >= today)
-                        .map(async s => {
-                            const type = s.session_type || 'morning';
+                    openPlaySessionsList.forEach(s => {
+                        const type = s.session_type || 'morning';
+                        if (!openPlaySessions[type]) {
                             openPlaySessions[type] = s;
-                            const { count } = await db.from('open_play_queue')
-                                .select('id', { count: 'exact', head: true })
-                                .eq('session_id', s.id);
-                            openPlayRegCounts[type] = count || 0;
-                        })
-                    );
-                    // Keep openPlaySession pointing to first available for backward compat
-                    openPlaySession = openPlaySessions.morning || openPlaySessions.night || null;
-                    openPlayRegCount = openPlaySession
-                        ? (openPlayRegCounts[openPlaySession.session_type] || 0)
-                        : 0;
+                            openPlayRegCounts[type] = s.regCount;
+                        }
+                    });
+                    openPlaySession = openPlaySessionsList[0] || null;
+                    openPlayRegCount = openPlaySession ? openPlaySession.regCount : 0;
                 } else {
                     openPlayDates = new Set();
                     openPlaySessions = {};
                     openPlayRegCounts = {};
+                    openPlaySessionsList = [];
                 }
             } catch (e) { /* silently skip */ }
         }
@@ -4721,31 +4731,31 @@
         function renderModeOpenPlayCards() {
             const container = document.getElementById('mode-open-play-cards');
             if (!container) return;
-            const sessions = [
-                { type: 'morning', label: 'Morning Open Play', icon: '🌅' },
-                { type: 'night',   label: 'Night Open Play',   icon: '🌙' },
-            ];
-            container.innerHTML = sessions
-                .filter(({ type }) => openPlaySessions[type])
-                .map(({ type, label, icon }) => {
-                    const s = openPlaySessions[type];
-                    const desc = `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
-                    return `<button class="mode-card open-play-card" onclick="showOpenPlay('${type}')">
-                        <div class="mode-card-icon">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--pink)"
-                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-                                <path d="M16 3.13a4 4 0 010 7.75"/>
-                            </svg>
-                        </div>
-                        <div class="mode-card-title">${icon} ${label}</div>
-                        <div class="mode-card-desc">${desc}</div>
-                        <span class="mode-card-pill">Sign up now</span>
-                    </button>`;
-                })
-                .join('');
+            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0);
+            if (available.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = available.map(s => {
+                const icon = s.session_type === 'night' ? '🌙' : '🌅';
+                const typeLabel = s.session_type === 'night' ? 'Night' : 'Morning';
+                const spotsLeft = s.max_players - s.regCount;
+                const desc = `${fmtDate(s.date)} · ${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
+                return `<button class="mode-card open-play-card" onclick="showOpenPlay('${s.id}')">
+                    <div class="mode-card-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--pink)"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="mode-card-title">${icon} ${typeLabel} Open Play</div>
+                    <div class="mode-card-desc">${desc}</div>
+                    <span class="mode-card-pill">${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left</span>
+                </button>`;
+            }).join('');
         }
 
         function fmtTime(t) {
@@ -4777,44 +4787,69 @@
             history.pushState({ page: 'main' }, '');
         }
 
-        function showOpenPlay(type) {
+        function showOpenPlay(sessionId) {
             document.getElementById('mode-screen').style.display = 'none';
             document.getElementById('open-play-screen').style.display = 'block';
             window.scrollTo(0, 0);
 
-            const hasBoth = openPlaySessions.morning && openPlaySessions.night;
-            if (!type && hasBoth) {
-                history.pushState({ page: 'openplay-pick' }, '');
-                renderSessionPicker();
-            } else {
-                const t = type || (openPlaySessions.morning ? 'morning' : 'night');
-                opSelectedSessionType = t;
-                openPlaySession = openPlaySessions[t];
-                openPlayRegCount = openPlayRegCounts[t] || 0;
+            if (sessionId) {
+                // Find by UUID first, then fall back to legacy type key
+                const sess = openPlaySessionsList.find(s => s.id === sessionId)
+                    || openPlaySessions[sessionId];
+                if (sess) {
+                    openPlaySession = sess;
+                    openPlayRegCount = sess.regCount !== undefined ? sess.regCount : (openPlayRegCounts[sess.session_type] || 0);
+                    opSelectedSessionType = sess.session_type || 'morning';
+                    history.pushState({ page: 'openplay' }, '');
+                    renderSessionCard();
+                    renderFormArea();
+                    return;
+                }
+            }
+
+            // No specific session: show list or go direct if only one available
+            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0);
+            if (available.length === 1) {
+                openPlaySession = available[0];
+                openPlayRegCount = available[0].regCount;
+                opSelectedSessionType = available[0].session_type || 'morning';
                 history.pushState({ page: 'openplay' }, '');
                 renderSessionCard();
                 renderFormArea();
+            } else {
+                history.pushState({ page: 'openplay-pick' }, '');
+                renderAllSessionsList();
             }
         }
 
-        function renderSessionPicker() {
-            const sessions = [
-                { type: 'morning', label: 'Morning Open Play', icon: '🌅' },
-                { type: 'night',   label: 'Night Open Play',   icon: '🌙' },
-            ];
+        function renderAllSessionsList() {
+            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0);
             document.getElementById('op-session-card').innerHTML = `
                 <div style="font-size:1.1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.25rem;">Choose a Session</div>
                 <p style="font-size:0.85rem;color:#777;margin:0 0 1rem;">Select which open play session you'd like to join.</p>`;
-            document.getElementById('op-form-area').innerHTML = sessions
-                .filter(({ type }) => openPlaySessions[type])
-                .map(({ type, label, icon }) => {
-                    const s = openPlaySessions[type];
-                    const regCount = openPlayRegCounts[type] || 0;
-                    const spotsLeft = s.max_players - regCount;
-                    const isFull = spotsLeft <= 0;
-                    const badgeClass = isFull ? 'spots-full' : spotsLeft <= 3 ? 'spots-low' : 'spots-ok';
-                    const badgeText = isFull ? 'Session Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
-                    return `<button onclick="showOpenPlay('${type}')" style="
+            if (available.length === 0) {
+                document.getElementById('op-form-area').innerHTML = `
+                <div class="op-full-card">
+                    <div style="font-size:2.2rem;margin-bottom:0.65rem;">&#128542;</div>
+                    <div style="font-size:1rem;font-weight:700;color:#b91c1c;margin-bottom:0.4rem;">No Available Sessions</div>
+                    <div style="font-size:0.84rem;color:#777;line-height:1.6;">All upcoming open play sessions are full. Check back later.</div>
+                </div>`;
+                return;
+            }
+            // Group by date
+            const byDate = {};
+            available.forEach(s => {
+                if (!byDate[s.date]) byDate[s.date] = [];
+                byDate[s.date].push(s);
+            });
+            document.getElementById('op-form-area').innerHTML = Object.entries(byDate).map(([date, sessions]) => {
+                const cards = sessions.map(s => {
+                    const spotsLeft = s.max_players - s.regCount;
+                    const badgeClass = spotsLeft <= 3 ? 'spots-low' : 'spots-ok';
+                    const badgeText = `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
+                    const icon = s.session_type === 'night' ? '🌙' : '🌅';
+                    const typeLabel = s.session_type === 'night' ? 'Night' : 'Morning';
+                    return `<button onclick="showOpenPlay('${s.id}')" style="
                         width:100%;text-align:left;background:#fff;border:2px solid #e8e8f0;
                         border-radius:16px;padding:1.1rem 1.2rem;margin-bottom:0.75rem;
                         cursor:pointer;font-family:'Montserrat',sans-serif;
@@ -4823,13 +4858,17 @@
                         onmouseover="this.style.borderColor='var(--pink)';this.style.boxShadow='0 2px 12px rgba(236,72,153,0.12)'"
                         onmouseout="this.style.borderColor='#e8e8f0';this.style.boxShadow='none'">
                         <div>
-                            <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.2rem;">${icon} ${label}</div>
+                            <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.2rem;">${icon} ${typeLabel} Open Play</div>
                             <div style="font-size:0.82rem;color:#666;">${fmtTime(s.start_time)} &ndash; ${fmtTime(s.end_time)} &nbsp;·&nbsp; &#8369;${s.price_per_player}</div>
                         </div>
                         <span class="op-spots-badge ${badgeClass}" style="white-space:nowrap;flex-shrink:0;">${badgeText}</span>
                     </button>`;
-                })
-                .join('');
+                }).join('');
+                return `<div style="margin-bottom:0.5rem;">
+                    <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.5rem;padding-left:0.25rem;">${fmtDate(date)}</div>
+                    ${cards}
+                </div>`;
+            }).join('');
         }
 
         function renderSessionCard() {
