@@ -4737,8 +4737,6 @@
                 return;
             }
             container.innerHTML = available.map(s => {
-                const icon = s.session_type === 'night' ? '🌙' : '🌅';
-                const typeLabel = s.session_type === 'night' ? 'Night' : 'Morning';
                 const spotsLeft = s.max_players - s.regCount;
                 const desc = `${fmtDate(s.date)} · ${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
                 return `<button class="mode-card open-play-card" onclick="showOpenPlay('${s.id}')">
@@ -4751,7 +4749,7 @@
                             <path d="M16 3.13a4 4 0 010 7.75"/>
                         </svg>
                     </div>
-                    <div class="mode-card-title">${icon} ${typeLabel} Open Play</div>
+                    <div class="mode-card-title">Open Play</div>
                     <div class="mode-card-desc">${desc}</div>
                     <span class="mode-card-pill">${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left</span>
                 </button>`;
@@ -4847,8 +4845,6 @@
                     const spotsLeft = s.max_players - s.regCount;
                     const badgeClass = spotsLeft <= 3 ? 'spots-low' : 'spots-ok';
                     const badgeText = `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
-                    const icon = s.session_type === 'night' ? '🌙' : '🌅';
-                    const typeLabel = s.session_type === 'night' ? 'Night' : 'Morning';
                     return `<button onclick="showOpenPlay('${s.id}')" style="
                         width:100%;text-align:left;background:#fff;border:2px solid #e8e8f0;
                         border-radius:16px;padding:1.1rem 1.2rem;margin-bottom:0.75rem;
@@ -4858,7 +4854,7 @@
                         onmouseover="this.style.borderColor='var(--pink)';this.style.boxShadow='0 2px 12px rgba(236,72,153,0.12)'"
                         onmouseout="this.style.borderColor='#e8e8f0';this.style.boxShadow='none'">
                         <div>
-                            <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.2rem;">${icon} ${typeLabel} Open Play</div>
+                            <div style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:0.2rem;">Open Play</div>
                             <div style="font-size:0.82rem;color:#666;">${fmtTime(s.start_time)} &ndash; ${fmtTime(s.end_time)} &nbsp;·&nbsp; &#8369;${s.price_per_player}</div>
                         </div>
                         <span class="op-spots-badge ${badgeClass}" style="white-space:nowrap;flex-shrink:0;">${badgeText}</span>
