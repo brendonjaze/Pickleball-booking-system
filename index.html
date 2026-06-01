@@ -525,6 +525,19 @@
             transform: scale(0.98);
         }
 
+        .book-btn:disabled,
+        .book-btn[disabled] {
+            background-color: #b0bec5;
+            color: #fff;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.7;
+        }
+        .book-btn:disabled:hover,
+        .book-btn[disabled]:hover {
+            background-color: #b0bec5;
+        }
+
         /* ─── Booking Page ─── */
         #main-page,
         #booking-page {
@@ -3378,6 +3391,10 @@
                     .eq('date', today);
                 if (error) return;
                 COURTS.forEach(c => {
+                    if (openPlayDates.has(today)) {
+                        courtTodayStatus[c.id] = 'full';
+                        return;
+                    }
                     const booked = new Set(data.filter(b => b.court_id === c.id).map(b => b.time_slot));
                     const locked = new Set(courtLocks
                         .filter(l => l.court_id === c.id && l.date === today)
@@ -3403,15 +3420,17 @@
 
         function isDateFullyLocked(dateStr) {
             if (!curCourt) return false;
-            return courtLocks.some(l =>
-                l.date === dateStr &&
-                l.court_id === curCourt.id &&
-                l.time_slot == null
+            const lockedSlots = new Set(
+                courtLocks
+                    .filter(l => l.date === dateStr && l.court_id === curCourt.id)
+                    .map(l => l.time_slot)
             );
+            return lockedSlots.size > 0 && TIME_SLOTS.every(s => lockedSlots.has(s));
         }
 
         function isSlotLocked(slot) {
             if (!curCourt || !selDate) return false;
+            if (openPlayDates.has(selDate)) return true;
             return courtLocks.some(l =>
                 l.date === selDate &&
                 l.court_id === curCourt.id &&
@@ -3656,6 +3675,27 @@
     `;
         }
 
+        function hasAnyBookableDates() {
+            const { maxMonth, maxYear } = getBookableRange();
+            const end = new Date(maxYear, maxMonth + 1, 0);
+            const d = new Date(); d.setHours(0, 0, 0, 0);
+            while (d <= end) {
+                const str = toDateStr(d);
+                if (!openPlayDates.has(str)) {
+                    // Date is not open play — check if at least one court has an open slot
+                    const anyCourtAvailable = COURTS.some(c => {
+                        const lockedSlots = new Set(
+                            courtLocks.filter(l => l.date === str && l.court_id === c.id).map(l => l.time_slot)
+                        );
+                        return !TIME_SLOTS.every(s => lockedSlots.has(s));
+                    });
+                    if (anyCourtAvailable) return true;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return false;
+        }
+
         // ── Render Courts (main page) ─────────────────────────
         function renderCourts() {
             const grid = document.getElementById('courts-grid');
@@ -3686,7 +3726,7 @@
                     </div>
                     <span class="court-price">₱${c.price_per_hour}/hr</span>
                 </div>
-                <button class="book-btn" onclick="openBooking(${c.id})">Book Now</button>
+                <button class="book-btn" onclick="openBooking(${c.id})" ${!hasAnyBookableDates() ? 'disabled' : ''}>Book Now</button>
             </div>
         </div>
     `).join('');
@@ -3737,6 +3777,7 @@
 
             history.pushState({ page: 'booking' }, '');
 
+            await fetchCourtLocks();
             renderCalendar();
             fetchAndSubscribe();
             fetchFullyBookedDates();
@@ -3754,6 +3795,8 @@
                 window.scrollTo(0, 0);
                 requestAnimationFrame(() => requestAnimationFrame(() => mainEl.classList.remove('page-exit')));
             }, 200);
+
+            fetchCourtLocks().then(() => fetchTodayAvailability());
         }
 
         window.addEventListener('popstate', (e) => {
