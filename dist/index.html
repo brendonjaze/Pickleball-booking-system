@@ -2147,7 +2147,7 @@
 
         .mode-section {
             padding: 1.5rem 2rem 4rem;
-            max-width: 680px;
+            max-width: 960px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
@@ -2191,25 +2191,24 @@
 
         .mode-card {
             flex: 1;
-            max-width: 270px;
-            min-height: 210px;
+            max-width: 392px;
             background: var(--white);
-            border-radius: 22px;
+            border-radius: 24px;
             border: none;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.85rem;
-            box-shadow: 0 4px 28px rgba(0, 0, 0, 0.08);
-            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s;
+            align-items: stretch;
+            gap: 0;
+            box-shadow: 0 6px 32px rgba(0, 0, 0, 0.09);
+            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.32s;
             position: relative;
             overflow: hidden;
-            padding: 2rem 1.5rem;
+            padding: 0;
             font-family: 'Montserrat', sans-serif;
             opacity: 0;
             animation: cardFadeUp 0.45s ease forwards;
+            text-align: left;
         }
 
         .mode-card:nth-child(1) {
@@ -2232,27 +2231,9 @@
             }
         }
 
-        .mode-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            border-radius: 22px 22px 0 0;
-        }
-
-        .mode-card.open-play-card::before {
-            background: linear-gradient(90deg, var(--pink), #f97316);
-        }
-
-        .mode-card.book-court-card::before {
-            background: linear-gradient(90deg, var(--green-dark), var(--green-medium));
-        }
-
         .mode-card:hover {
-            transform: translateY(-7px);
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.13);
+            transform: translateY(-10px);
+            box-shadow: 0 28px 60px rgba(0, 0, 0, 0.15);
         }
 
         .mode-card:active {
@@ -2260,54 +2241,90 @@
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
 
-        .mode-card-icon {
-            width: 58px;
-            height: 58px;
+        .mode-card-img-wrap {
+            padding: 12px 12px 0;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .mode-card-img {
+            width: 100%;
+            height: 266px;
+            object-fit: cover;
             border-radius: 16px;
+            display: block;
+            transition: transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            pointer-events: none;
+        }
+
+        .mode-card:hover .mode-card-img {
+            transform: scale(1.07);
+        }
+
+        .mode-card-body {
+            padding: 1.1rem 1.35rem 0.75rem;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
+            flex-direction: column;
+            gap: 0.22rem;
+            flex: 1;
         }
 
-        .open-play-card .mode-card-icon {
-            background: var(--pink-light);
-        }
-
-        .book-court-card .mode-card-icon {
-            background: var(--green-light);
-        }
-
-        .mode-card-title {
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: #1a1a1a;
-            letter-spacing: 0.01em;
-        }
-
-        .mode-card-desc {
-            font-size: 0.76rem;
-            color: var(--gray);
-            text-align: center;
-            line-height: 1.55;
-        }
-
-        .mode-card-pill {
-            font-size: 0.68rem;
+        .mode-card-eyebrow {
+            font-size: 0.62rem;
             font-weight: 700;
-            padding: 0.22rem 0.65rem;
-            border-radius: 999px;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
         }
 
-        .open-play-card .mode-card-pill {
-            background: var(--pink-light);
+        .open-play-card .mode-card-eyebrow {
             color: var(--pink);
         }
 
-        .book-court-card .mode-card-pill {
-            background: var(--green-light);
-            color: var(--green-dark);
+        .book-court-card .mode-card-eyebrow {
+            color: var(--green-medium);
+        }
+
+        .mode-card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.22rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.2;
+        }
+
+        .mode-card-desc {
+            font-size: 0.74rem;
+            color: var(--gray);
+            line-height: 1.5;
+            margin-top: 0.08rem;
+        }
+
+        .mode-card-cta {
+            margin: 0 1.2rem 1.2rem;
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-align: center;
+            color: white;
+            user-select: none;
+            transition: opacity 0.2s;
+        }
+
+        .open-play-card .mode-card-cta {
+            background: linear-gradient(135deg, var(--pink) 0%, #f97316 100%);
+            box-shadow: 0 4px 18px rgba(228, 24, 154, 0.32);
+        }
+
+        .book-court-card .mode-card-cta {
+            background: linear-gradient(135deg, var(--green-dark) 0%, #06b6d4 100%);
+            box-shadow: 0 4px 18px rgba(14, 116, 144, 0.32);
+        }
+
+        .mode-card:hover .mode-card-cta {
+            opacity: 0.88;
         }
 
         @media (max-width: 520px) {
@@ -2324,39 +2341,16 @@
 
             .mode-card {
                 max-width: 100%;
-                min-height: 110px;
-                flex-direction: row;
-                justify-content: flex-start;
-                padding: 1.4rem 1.5rem;
-                gap: 1.1rem;
-                border-radius: 16px;
+                border-radius: 20px;
+                flex-direction: column;
             }
 
-            .mode-card::before {
-                height: 0;
-                width: 4px;
-                top: 0;
-                bottom: 0;
-                right: auto;
-                border-radius: 16px 0 0 16px;
-            }
-
-            .mode-card-icon {
-                width: 50px;
-                height: 50px;
-                flex-shrink: 0;
-            }
-
-            .mode-card-title {
-                font-size: 1rem;
-            }
-
-            .mode-card-desc {
-                text-align: left;
+            .mode-card-img {
+                height: 231px;
             }
 
             .mode-card:hover {
-                transform: translateX(4px);
+                transform: translateY(-4px);
             }
         }
 
@@ -2820,31 +2814,26 @@
                 <p class="mode-subtitle">Choose your game mode for today</p>
                 <div class="mode-cards">
                     <button class="mode-card open-play-card" id="mode-op-btn" onclick="showOpenPlay()">
-                        <div class="mode-card-icon">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--pink)"
-                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                                <path d="M16 3.13a4 4 0 010 7.75" />
-                            </svg>
+                        <div class="mode-card-img-wrap">
+                            <img src="paddle.jpg" alt="Open Play" class="mode-card-img">
                         </div>
-                        <div class="mode-card-title">Open Play</div>
-                        <div class="mode-card-desc">Join today's session</div>
-                        <span class="mode-card-pill">Sign up now</span>
+                        <div class="mode-card-body">
+                            <span class="mode-card-eyebrow">Community</span>
+                            <div class="mode-card-title">Open Play</div>
+                            <div class="mode-card-desc">Join today's session</div>
+                        </div>
+                        <div class="mode-card-cta">Join Now</div>
                     </button>
                     <button class="mode-card book-court-card" onclick="showMainFromMode()">
-                        <div class="mode-card-icon">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0e7490"
-                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" />
-                                <line x1="3" y1="12" x2="21" y2="12" />
-                                <line x1="12" y1="3" x2="12" y2="21" />
-                            </svg>
+                        <div class="mode-card-img-wrap">
+                            <img src="aerial court view.jpg" alt="Court Rental" class="mode-card-img">
                         </div>
-                        <div class="mode-card-title">Court Rental</div>
-                        <div class="mode-card-desc">1:00 PM &ndash; 5:00 PM</div>
-                        <span class="mode-card-pill">Book now</span>
+                        <div class="mode-card-body">
+                            <span class="mode-card-eyebrow">Private Booking</span>
+                            <div class="mode-card-title">Court Rental</div>
+                            <div class="mode-card-desc">1:00 PM &ndash; 5:00 PM</div>
+                        </div>
+                        <div class="mode-card-cta">Book Now</div>
                     </button>
                 </div>
             </div>
