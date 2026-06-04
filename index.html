@@ -1902,48 +1902,17 @@
             line-height: 1.6;
         }
 
-        .sched-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 0.22rem;
-            margin-top: 0.1rem;
-        }
-
-        .sched-row {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.3rem 0.5rem;
-            border-radius: 8px;
-        }
-
-        .sched-row:nth-child(odd) {
-            background: rgba(153, 27, 27, 0.07);
-        }
-
-        .sched-day {
-            background: linear-gradient(135deg, #c0392b, #a93226);
-            color: #fff;
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 0.2rem 0.6rem;
-            border-radius: 5px;
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: 140px;
-            text-align: center;
-            letter-spacing: 0.01em;
-        }
-
-        .sched-sep {
-            display: none;
-        }
-
-        .sched-time {
-            color: #7f1d1d;
+        .announcement-banner-content {
+            color: #c0392b;
+            font-size: 0.9rem;
             font-weight: 600;
-            font-size: 0.84rem;
-            line-height: 1.35;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .announcement-banner-content p,
+        .announcement-banner-content div {
+            margin: 0;
         }
 
         /* Toast notification */
@@ -2130,13 +2099,8 @@
                 font-size: 0.78rem;
             }
 
-            .sched-day {
-                min-width: 120px;
-                font-size: 0.65rem;
-            }
-
-            .sched-time {
-                font-size: 0.78rem;
+            .announcement-banner-content {
+                font-size: 0.82rem;
             }
         }
 
@@ -3286,34 +3250,13 @@
 
         function buildAnnouncementHtml(a) {
             if (!a || !a.is_visible || !a.content) return '';
-            const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            // Matches: DayName + optional (date) + dash + schedule text until next day or end
-            const lineRx = new RegExp(
-                `(${DAYS.join('|')})\\s*(\\([^)]+\\))?\\s*[-–]\\s*([\\s\\S]*?)(?=(?:${DAYS.join('|')})\\s*(?:\\([^)]+\\))?\\s*[-–]|$)`,
-                'gi'
-            );
-            const entries = [...a.content.matchAll(lineRx)]
-                .map(m => ({ label: m[1] + (m[2] ? ' ' + m[2] : ''), sched: m[3].trim() }))
-                .filter(e => e.sched);
-
-            let body = '';
-            if (entries.length) {
-                body = `<div class="sched-grid">${entries.map(({ label, sched }) =>
-                    `<div class="sched-row">` +
-                    `<span class="sched-day">${label}</span>` +
-                    `<span class="sched-sep">—</span>` +
-                    `<span class="sched-time">${sched}</span>` +
-                    `</div>`
-                ).join('')}</div>`;
-            } else {
-                body = `<p>${a.content}</p>`;
-            }
-
+            // Render the rich-text HTML exactly as written in the admin editor,
+            // mirroring the admin "Preview — how users will see it" panel.
             return `<div class="announcement-banner">
         <span class="announcement-banner-icon">📢</span>
         <div class="announcement-banner-body">
             ${a.title ? `<h3>${a.title}</h3>` : ''}
-            ${body}
+            <div class="announcement-banner-content">${a.content}</div>
         </div>
     </div>`;
         }

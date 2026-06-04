@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="/BMJ COURT PICKLEBALL - PRIMARY LOGO.png">
+    <link rel="icon" type="image/png" href="./BMJ COURT PICKLEBALL - PRIMARY LOGO.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glan Pickleball Community</title>
     <link rel="manifest" href="./manifest.json">
@@ -1902,48 +1902,17 @@
             line-height: 1.6;
         }
 
-        .sched-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 0.22rem;
-            margin-top: 0.1rem;
-        }
-
-        .sched-row {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.3rem 0.5rem;
-            border-radius: 8px;
-        }
-
-        .sched-row:nth-child(odd) {
-            background: rgba(153, 27, 27, 0.07);
-        }
-
-        .sched-day {
-            background: linear-gradient(135deg, #c0392b, #a93226);
-            color: #fff;
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 0.2rem 0.6rem;
-            border-radius: 5px;
-            white-space: nowrap;
-            flex-shrink: 0;
-            min-width: 140px;
-            text-align: center;
-            letter-spacing: 0.01em;
-        }
-
-        .sched-sep {
-            display: none;
-        }
-
-        .sched-time {
-            color: #7f1d1d;
+        .announcement-banner-content {
+            color: #c0392b;
+            font-size: 0.9rem;
             font-weight: 600;
-            font-size: 0.84rem;
-            line-height: 1.35;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .announcement-banner-content p,
+        .announcement-banner-content div {
+            margin: 0;
         }
 
         /* Toast notification */
@@ -2130,13 +2099,8 @@
                 font-size: 0.78rem;
             }
 
-            .sched-day {
-                min-width: 120px;
-                font-size: 0.65rem;
-            }
-
-            .sched-time {
-                font-size: 0.78rem;
+            .announcement-banner-content {
+                font-size: 0.82rem;
             }
         }
 
@@ -3241,6 +3205,7 @@
                     surround: colors.surround,
                 };
             });
+            console.log('[fetchCourts] Loaded', COURTS.length, 'courts:', COURTS.map(c => c.id + ':' + c.name));
         }
 
         const TIME_SLOTS = [
@@ -3287,34 +3252,13 @@
 
         function buildAnnouncementHtml(a) {
             if (!a || !a.is_visible || !a.content) return '';
-            const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            // Matches: DayName + optional (date) + dash + schedule text until next day or end
-            const lineRx = new RegExp(
-                `(${DAYS.join('|')})\\s*(\\([^)]+\\))?\\s*[-–]\\s*([\\s\\S]*?)(?=(?:${DAYS.join('|')})\\s*(?:\\([^)]+\\))?\\s*[-–]|$)`,
-                'gi'
-            );
-            const entries = [...a.content.matchAll(lineRx)]
-                .map(m => ({ label: m[1] + (m[2] ? ' ' + m[2] : ''), sched: m[3].trim() }))
-                .filter(e => e.sched);
-
-            let body = '';
-            if (entries.length) {
-                body = `<div class="sched-grid">${entries.map(({ label, sched }) =>
-                    `<div class="sched-row">` +
-                    `<span class="sched-day">${label}</span>` +
-                    `<span class="sched-sep">—</span>` +
-                    `<span class="sched-time">${sched}</span>` +
-                    `</div>`
-                ).join('')}</div>`;
-            } else {
-                body = `<p>${a.content}</p>`;
-            }
-
+            // Render the rich-text HTML exactly as written in the admin editor,
+            // mirroring the admin "Preview — how users will see it" panel.
             return `<div class="announcement-banner">
         <span class="announcement-banner-icon">📢</span>
         <div class="announcement-banner-body">
             ${a.title ? `<h3>${a.title}</h3>` : ''}
-            ${body}
+            <div class="announcement-banner-content">${a.content}</div>
         </div>
     </div>`;
         }
@@ -3439,6 +3383,90 @@
 
         // ── Loading Screen ────────────────────────────────────
         window.addEventListener('load', async () => {
+            // Check if returning from PayMongo payment
+            const params = new URLSearchParams(window.location.search);
+            console.log('[LOAD] URL params:', window.location.search);
+            console.log('[LOAD] payment param:', params.get('payment'));
+            if (params.get('payment') === 'success') {
+                console.log('[LOAD] ===== PAYMENT SUCCESS DETECTED =====');
+                const pendingData = sessionStorage.getItem('pendingBooking');
+                console.log('[LOAD] pendingBooking from sessionStorage:', pendingData);
+                if (pendingData) {
+                    // Wait for courts to be loaded first
+                    await Promise.all([fetchCourts(), fetchOpenPlay()]);
+
+                    try {
+                        const data = JSON.parse(pendingData);
+                        // Restore booking variables for the finish function
+                        if (data.type === 'court') {
+                            window._bookingRef = data.bookingRef;
+                            bookingName = data.name;
+                            bookingPhone = data.phone;
+                            bookingPayment = data.paymentMethod;
+                            // Set the court and date from stored data (courts now loaded)
+                            // Note: COURTS is uppercase - fetchCourts() populates this array
+                            curCourt = COURTS.find(c => c.id === data.courtId);
+                            if (!curCourt) {
+                                console.error('Court not found:', data.courtId, 'Available courts:', COURTS);
+                                sessionStorage.removeItem('pendingBooking');
+                                window.history.replaceState({}, '', window.location.pathname);
+                                alert('Booking data not found. Please contact support.');
+                                return;
+                            }
+                            selDate = data.date;
+                            // Restore slot selection from stored slots
+                            if (data.slots && data.slots.length > 0) {
+                                const firstSlot = data.slots[0];
+                                selStart = TIME_SLOTS.indexOf(firstSlot);
+                                selEnd = selStart + data.slots.length - 1;
+                            }
+                            // Auto-complete the booking after data is restored
+                            console.log('[LOAD] About to call finishBooking for court booking...');
+                            setTimeout(async () => {
+                                // First open the modal so finishBooking can populate it
+                                document.getElementById('modal').classList.add('show');
+                                // Set wizard to step 3 so the thank-you content is rendered
+                                wizardStep = 3;
+                                console.log('[LOAD] Calling finishBooking()...');
+                                await finishBooking();
+                                console.log('[LOAD] finishBooking completed');
+                                // Clear the pending booking ONLY after booking is saved
+                                sessionStorage.removeItem('pendingBooking');
+                                window.history.replaceState({}, '', window.location.pathname);
+                            }, 500);
+                        } else if (data.type === 'openplay') {
+                            window._opBookingRef = data.bookingRef;
+                            opName = data.name;
+                            opPhone = data.phone;
+                            opPayment = data.paymentMethod;
+                            opSkillLevel = data.skillLevel;
+                            // Restore the specific session that was being registered
+                            const restoredSession = Object.values(openPlaySessions).find(s => s && s.id === data.sessionId);
+                            if (restoredSession) {
+                                openPlaySession = restoredSession;
+                                openPlayRegCount = openPlayRegCounts[restoredSession.session_type] || 0;
+                            }
+                            // Auto-complete the open play registration after data is restored
+                            setTimeout(async () => {
+                                document.getElementById('modal').classList.add('show');
+                                opWizardStep = 3;
+                                await finishOpRegistration();
+                                // Clear the pending booking ONLY after registration is saved
+                                sessionStorage.removeItem('pendingBooking');
+                                window.history.replaceState({}, '', window.location.pathname);
+                            }, 500);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse pending booking:', e);
+                        sessionStorage.removeItem('pendingBooking');
+                    }
+                }
+            } else if (params.get('payment') === 'cancel') {
+                // User canceled payment, clean up
+                sessionStorage.removeItem('pendingBooking');
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+
             fetchAnnouncement();
 
             // Capture animation-complete event early so it's not missed during data fetch
@@ -3588,6 +3616,7 @@
             while (d <= end) {
                 const str = toDateStr(d);
                 if (!openPlayDates.has(str)) {
+                    // Date is not open play — check if at least one court has an open slot
                     const anyCourtAvailable = COURTS.some(c => {
                         const lockedSlots = new Set(
                             courtLocks.filter(l => l.date === str && l.court_id === c.id).map(l => l.time_slot)
@@ -4402,6 +4431,15 @@
                 a.download = `GlanPickleball-Receipt-${ref}.jpg`;
                 a.click();
                 showToast('✓ Receipt saved to your device!');
+                
+                // Auto-close modal after download
+                setTimeout(() => {
+                    const body = document.getElementById('modal-body');
+                    if (body) {
+                        body.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="font-size:1.2rem;color:var(--green-dark);font-weight:600;">Receipt downloaded!</div><div style="font-size:0.9rem;color:#666;margin-top:0.5rem;">Closing...</div></div>`;
+                    }
+                    setTimeout(() => closeModal(), 1500);
+                }, 500);
             }
         }
 
@@ -4500,9 +4538,18 @@
                 a.download = `GlanPickleball-OpenPlay-${ref}.jpg`;
                 a.click();
                 showToast('✓ Receipt saved to your device!');
+                
+                // Auto-close modal after download
+                setTimeout(() => {
+                    const body = document.getElementById('modal-body');
+                    if (body) {
+                        body.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="font-size:1.2rem;color:var(--green-dark);font-weight:600;">Receipt downloaded!</div><div style="font-size:0.9rem;color:#666;margin-top:0.5rem;">Closing...</div></div>`;
+                    }
+                    setTimeout(() => closeModal(), 1500);
+                }, 500);
             }
         }
-
+        
         function showToast(msg = '✓ Receipt saved to your device!') {
             const t = document.getElementById('dl-toast');
             if (!t) return;
@@ -4621,6 +4668,18 @@
             const amount = s.price_per_player;
             const bookingRef = window._opBookingRef || ('OPR-' + Date.now().toString(36).toUpperCase());
 
+            // Store booking data in sessionStorage BEFORE redirecting to PayMongo
+            sessionStorage.setItem('pendingBooking', JSON.stringify({
+                type: 'openplay',
+                bookingRef: bookingRef,
+                sessionId: s.id,
+                date: s.date,
+                name: opName,
+                phone: opPhone,
+                paymentMethod: opPayment,
+                skillLevel: opSkillLevel
+            }));
+
             const btn = document.getElementById('paymongo-op-btn');
             btn.disabled = true;
             btn.textContent = 'Preparing Checkout...';
@@ -4703,10 +4762,25 @@
         }
 
         async function finishBooking() {
+            console.log('[finishBooking] ===== START =====');
+            console.log('[finishBooking] curCourt:', curCourt);
+            console.log('[finishBooking] selDate:', selDate);
+            console.log('[finishBooking] bookingName:', bookingName);
+            console.log('[finishBooking] bookingPhone:', bookingPhone);
+            console.log('[finishBooking] bookingPayment:', bookingPayment);
+            
             const slots = getSelSlotRange();
+            console.log('[finishBooking] slots from getSelSlotRange():', slots);
+            if (slots.length === 0) {
+                console.error('[finishBooking] ERROR - No slots! selStart:', selStart, 'selEnd:', selEnd);
+                alert('No time slots selected. Please try booking again.');
+                return;
+            }
             const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
+            console.log('[finishBooking] bookingRef:', bookingRef);
 
             const next = document.getElementById('btn-next');
+            console.log('[finishBooking] btn-next element:', next);
             next.disabled = true;
             next.textContent = 'Uploading receipt…';
 
@@ -4769,11 +4843,12 @@
                 booking_ref: bookingRef,
                 receipt_url: receiptUrl
             }));
+            console.log('[finishBooking] Inserting rows:', JSON.stringify(rows));
 
             const { error } = await db.from('bookings').insert(rows);
 
             if (error) {
-                console.error('Supabase insert error:', JSON.stringify(error));
+                console.error('[finishBooking] Supabase insert error:', JSON.stringify(error));
 
                 // Unique constraint violation — someone else just grabbed the slot
                 const isConflict = error.code === '23505' ||
@@ -4802,6 +4877,7 @@
             }
 
             // Success — show thank-you + download inside the modal
+            console.log('[finishBooking] Booking saved successfully!');
             const timeStr = slotRangeLabel(slots);
             const dateStr = formatDate(selDate);
             const body = document.getElementById('modal-body');
@@ -5336,6 +5412,7 @@
         }
 
         async function finishOpRegistration() {
+            // Always derive session from opSelectedSessionType to prevent stale-global bugs
             const activeSession = (opSelectedSessionType && openPlaySessions[opSelectedSessionType])
                 || openPlaySession;
             const btn = document.getElementById('btn-next');
