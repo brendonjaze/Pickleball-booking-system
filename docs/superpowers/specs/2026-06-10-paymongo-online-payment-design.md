@@ -104,8 +104,11 @@ Wizard (summary -> name/phone -> review)
 > Column types below must be confirmed against the live schema during implementation
 > (e.g. `session_id` may be `bigint` or `uuid`).
 
-1. **Court unique index** (dedupe existing duplicates first, then):
-   `CREATE UNIQUE INDEX bookings_court_date_slot_uniq ON bookings (court_id, date, time_slot);`
+1. **Court unique index** — `bookings (court_id, date, time_slot)`.
+   - **Verify first:** `finishBooking()` already handles `23505` unique-violations
+     and there is a `court_locks` table, which suggests this constraint *may already
+     exist*. The migration checks for it and only creates it if missing (dedupe any
+     existing duplicates first).
    - No `cancelled` status exists today, so a plain unique index is correct. If
      cancellation is added later, switch to a partial index excluding cancelled
      (leave a SQL comment noting this).
