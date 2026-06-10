@@ -82,29 +82,36 @@ export default async function handler(req, res) {
 
     try {
         if (metadata.type === 'openplay') {
-            // Idempotency: skip if already registered (same session + mobile)
-            const check = await supabaseRequest(
-                `open_play_queue?session_id=eq.${encodeURIComponent(metadata.session_id)}&mobile=eq.${encodeURIComponent(metadata.mobile)}&select=id&limit=1`,
-                supabaseUrl, supabaseKey
-            );
-            if (check.ok && check.body?.length > 0) {
-                console.log('Webhook: openplay already registered, skipping');
-                return res.status(200).json({ received: true, status: 'already_registered' });
-            }
-
-            const insert = await supabaseRequest('open_play_queue', supabaseUrl, supabaseKey, {
+            const rpc = await supabaseRequest('rpc/register_open_play', supabaseUrl, supabaseKey, {
                 method: 'POST',
-                headers: { 'Prefer': 'return=representation' },
                 body: JSON.stringify({
-                    session_id: metadata.session_id,
-                    player_name: metadata.player_name,
-                    mobile: metadata.mobile,
-                    skill_level: metadata.skill_level || 'beginner',
-                    is_guest: true,
+                    p_session_id: metadata.session_id,
+                    p_player_name: metadata.player_name,
+                    p_mobile: metadata.mobile,
+                    p_skill_level: metadata.skill_level || 'beginner',
+                    p_is_guest: true,
                 }),
             });
-            if (!insert.ok) throw new Error(`Supabase openplay insert failed: ${JSON.stringify(insert.body)}`);
-            console.log('Webhook: openplay registered via webhook', insert.body);
+            if (!rpc.ok) throw new Error(`Supabase register_open_play failed: ${JSON.stringify(rpc.body)}`);
+
+            // PostgREST returns the function's jsonb result directly; if your project
+            // wraps it in an array, use Array.isArray(rpc.body) ? rpc.body[0] : rpc.body.
+            const result = Array.isArray(rpc.body) ? rpc.body[0] : rpc.body;
+            if (result && result.ok === false) {
+                console.error('Webhook: openplay could not register —', result.reason, 'session', metadata.session_id);
+                await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({
+                        type: 'openplay',
+                        booking_ref: metadata.booking_ref,
+                        reason: result.reason || 'register_failed',
+                        payload: metadata,
+                    }),
+                });
+                return res.status(200).json({ received: true, status: `openplay_${result.reason}_refund_needed` });
+            }
+            console.log('Webhook: openplay registered via RPC', JSON.stringify(result));
 
         } else if (metadata.type === 'court') {
             const slots = JSON.parse(metadata.slots_json || '[]');
