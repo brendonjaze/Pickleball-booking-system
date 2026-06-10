@@ -135,7 +135,25 @@ export default async function handler(req, res) {
                 headers: { 'Prefer': 'return=minimal' },
                 body: JSON.stringify(rows),
             });
-            if (!insert.ok) throw new Error(`Supabase court insert failed: ${JSON.stringify(insert.body)}`);
+            if (!insert.ok) {
+                const isConflict = insert.status === 409 ||
+                    (insert.body && JSON.stringify(insert.body).includes('23505'));
+                if (isConflict) {
+                    console.error('Webhook: court slot conflict — recording booking_failure for ref', metadata.booking_ref);
+                    await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
+                        method: 'POST',
+                        headers: { 'Prefer': 'return=minimal' },
+                        body: JSON.stringify({
+                            type: 'court',
+                            booking_ref: metadata.booking_ref,
+                            reason: 'slot_taken',
+                            payload: metadata,
+                        }),
+                    });
+                    return res.status(200).json({ received: true, status: 'slot_conflict_refund_needed' });
+                }
+                throw new Error(`Supabase court insert failed: ${JSON.stringify(insert.body)}`);
+            }
             console.log('Webhook: court booking saved via webhook for ref', metadata.booking_ref);
 
         } else {
