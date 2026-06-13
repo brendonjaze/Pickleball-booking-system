@@ -5328,24 +5328,24 @@
             </div>`;
 
             } else if (opWizardStep === 3) {
-                {
-                    body.innerHTML = `
+                body.innerHTML = `
                 <div style="text-align:center;padding:1.5rem 1rem;">
-                    <div style="font-size:3rem;margin-bottom:0.75rem;">🚶</div>
-                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Walk-in Payment</div>
+                    <div style="font-size:3rem;margin-bottom:0.75rem;">💳</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Pay Online to Confirm</div>
                     <p style="font-size:0.88rem;color:#555;line-height:1.6;margin-bottom:1.25rem;">
-                        Pay at the venue <strong>before play starts</strong>.<br>Present your name to the staff on arrival.
+                        Your spot is confirmed <strong>only after payment</strong>.<br>Pay securely via GCash, Maya, or QR Ph.
                     </p>
                     <div style="background:#f0faf3;border:2px solid var(--green-dark);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.25rem;">
-                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Amount to pay at venue</div>
+                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Amount per player</div>
                         <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${Number(amount).toLocaleString()}</div>
-                        <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">Per player</div>
                     </div>
-                    <div style="background:#fff0f0;border:1.5px solid #e53e3e;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#c00;line-height:1.5;">
-                        ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
-                    </div>
+                    <button id="paymongo-op-btn" onclick="payWithPaymongoOp()" style="
+                        width:100%;background:var(--green-dark);color:#fff;border:none;border-radius:10px;
+                        padding:0.85rem 1.3rem;font-size:0.95rem;font-weight:700;
+                        cursor:pointer;font-family:'Montserrat',sans-serif;">
+                        Proceed to Payment
+                    </button>
                 </div>`;
-                }
             }
         }
 
@@ -5354,9 +5354,7 @@
             const next = document.getElementById('btn-next');
             prev.disabled = opWizardStep === 0;
             if (opWizardStep === 3) {
-                next.textContent = 'Done';
-                next.style.display = '';
-                next.disabled = false;
+                next.style.display = 'none';
             } else {
                 next.style.display = '';
                 next.innerHTML = 'Next &#8594;';
@@ -5365,9 +5363,9 @@
         }
 
         async function opWizardNext() {
-            if (opWizardStep === 3) { await finishOpRegistration(); return; }
+            if (opWizardStep === 3) { await payWithPaymongoOp(); return; }
             if (opWizardStep === 1) {
-                opPayment = 'Walk-in (Pay at venue)';
+                opPayment = 'QRPh (GCash/Maya/ShopeePay)';
                 opWizardStep = 3;
             } else {
                 opWizardStep++;
