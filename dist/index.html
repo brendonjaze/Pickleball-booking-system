@@ -4674,6 +4674,22 @@
             const amount = slots.length * curCourt.price_per_hour;
             const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
 
+            // Pre-pay re-check: bail out if any chosen slot was just taken.
+            try {
+                const { data: taken } = await db.from('bookings')
+                    .select('time_slot')
+                    .eq('court_id', curCourt.id).eq('date', selDate).in('time_slot', slots);
+                if (taken && taken.length > 0) {
+                    alert('Sorry, one or more of your selected time slots were just booked. Please pick another time.');
+                    closeModal();
+                    if (typeof fetchBookedSlots === 'function') await fetchBookedSlots();
+                    selStart = -1; selEnd = -1;
+                    if (typeof renderSlots === 'function') renderSlots();
+                    if (typeof updateConfirm === 'function') updateConfirm();
+                    return;
+                }
+            } catch (e) { console.error('Pre-pay slot check failed:', e); }
+
             // Store booking data in sessionStorage BEFORE redirecting to PayMongo
             // This allows us to retrieve it after the payment redirect
             sessionStorage.setItem('pendingBooking', JSON.stringify({
@@ -4750,6 +4766,18 @@
             if (!s) return;
             const amount = s.price_per_player;
             const bookingRef = window._opBookingRef || ('OPR-' + Date.now().toString(36).toUpperCase());
+
+            // Pre-pay re-check: bail out if the session just filled up.
+            try {
+                const { count } = await db.from('open_play_queue')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('session_id', s.id);
+                if (typeof count === 'number' && count >= s.max_players) {
+                    alert('Sorry, this Open Play session just filled up. Please check back for another session.');
+                    closeModal();
+                    return;
+                }
+            } catch (e) { console.error('Pre-pay capacity check failed:', e); }
 
             // Store booking data in sessionStorage BEFORE redirecting to PayMongo
             sessionStorage.setItem('pendingBooking', JSON.stringify({
