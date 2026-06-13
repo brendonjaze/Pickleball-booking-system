@@ -4565,6 +4565,12 @@
             }
         }
 
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         async function confirmPaidBooking(type, data) {
             const body = document.getElementById('modal-body');
             const prev = document.getElementById('btn-prev');
@@ -4610,7 +4616,7 @@
                     <div style="font-size:1.05rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Payment received</div>
                     <div style="font-size:0.85rem;color:#666;line-height:1.7;">
                         Your booking is being processed. Keep your reference<br>
-                        <strong>${ref}</strong><br>and contact us if it doesn't appear shortly.
+                        <strong>${escHtml(ref)}</strong><br>and contact us if it doesn't appear shortly.
                     </div>
                 </div>`;
             }
@@ -4627,8 +4633,8 @@
                 <div style="font-size:2.5rem;margin-bottom:0.5rem;">🎉</div>
                 <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.35rem;">Payment confirmed!</div>
                 <div style="font-size:0.84rem;color:#555;line-height:1.7;margin-bottom:1rem;">
-                    <strong>${bookingName}</strong>, your court is reserved.<br>
-                    <span style="color:var(--green-dark);font-weight:600;">${curCourt?.name || 'Court'}</span> &nbsp;·&nbsp; ${dateStr}<br>
+                    <strong>${escHtml(bookingName)}</strong>, your court is reserved.<br>
+                    <span style="color:var(--green-dark);font-weight:600;">${escHtml(curCourt?.name || 'Court')}</span> &nbsp;·&nbsp; ${dateStr}<br>
                     ${timeStr}
                 </div>
                 <button onclick="downloadReceipt()" style="
@@ -4644,7 +4650,6 @@
         function renderOpPaidThankYou(name, queueNumber) {
             const body = document.getElementById('modal-body');
             if (!body) return;
-            const safeName = (name || '').replace(/'/g, "\\'");
             body.innerHTML = `
             <div style="text-align:center;padding:1.5rem 1rem;">
                 <div style="font-size:2.5rem;margin-bottom:0.5rem;">🎉</div>
@@ -4652,12 +4657,12 @@
                 ${queueNumber ? `
                 <div style="margin:0.75rem auto 0.5rem;background:var(--green-light);border:2px solid var(--green-dark);border-radius:14px;display:inline-block;padding:0.5rem 1.5rem;">
                     <div style="font-size:0.72rem;color:var(--green-dark);font-weight:600;letter-spacing:1px;text-transform:uppercase;">Your Player Number</div>
-                    <div style="font-size:2.2rem;font-weight:800;color:var(--green-dark);line-height:1.2;">#${queueNumber}</div>
+                    <div style="font-size:2.2rem;font-weight:800;color:var(--green-dark);line-height:1.2;">#${escHtml(queueNumber)}</div>
                 </div>` : ''}
                 <div style="font-size:0.86rem;color:#666;line-height:1.7;margin-top:0.5rem;margin-bottom:1rem;">
-                    See you on the court, <strong>${name}</strong>!
+                    See you on the court, <strong>${escHtml(name)}</strong>!
                 </div>
-                <button onclick="downloadOpReceipt('${safeName}', ${queueNumber || 'null'})" style="
+                <button onclick="downloadOpReceipt(${escHtml(JSON.stringify(String(name || '')))}, ${Number.isInteger(queueNumber) ? queueNumber : 'null'})" style="
                     display:inline-flex;align-items:center;gap:0.4rem;justify-content:center;width:100%;
                     background:var(--green-dark);color:#fff;border:none;border-radius:8px;
                     padding:0.7rem 1.2rem;font-size:0.85rem;font-weight:700;
