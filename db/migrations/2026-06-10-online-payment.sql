@@ -52,6 +52,12 @@ declare
     v_count integer;
     v_qnum  integer;
 begin
+    -- Normalize skill level to a constraint-valid value so a stray category
+    -- can never fail a paid registration (defense-in-depth with the CHECK in §5).
+    if p_skill_level is null or p_skill_level not in ('beginner','novice','intermediate','advanced') then
+        p_skill_level := 'beginner';
+    end if;
+
     -- Lock the session row so concurrent registrations serialize.
     select max_players into v_cap
     from public.open_play_sessions
@@ -86,3 +92,30 @@ begin
     return jsonb_build_object('ok', true, 'status', 'registered', 'queue_number', v_qnum);
 end;
 $$;
+
+-- ── 5. Allow 'novice' as a valid open-play skill level ────────────────────────
+-- The registration UI offers Beginner/Novice, but the original CHECK allowed only
+-- beginner/intermediate/advanced — so a 'novice' pick failed AFTER payment (the
+-- webhook's register_open_play insert would violate the constraint and 500). Drop
+-- any existing CHECK touching skill_level, then recreate it including 'novice'.
+do $$
+declare
+    c record;
+begin
+    for c in
+        select con.conname
+        from pg_constraint con
+        join pg_class rel on rel.oid = con.conrelid
+        join pg_namespace nsp on nsp.oid = rel.relnamespace
+        where nsp.nspname = 'public'
+          and rel.relname = 'open_play_queue'
+          and con.contype = 'c'
+          and pg_get_constraintdef(con.oid) ilike '%skill_level%'
+    loop
+        execute format('alter table public.open_play_queue drop constraint %I', c.conname);
+    end loop;
+end $$;
+
+alter table public.open_play_queue
+    add constraint open_play_queue_skill_level_check
+    check (skill_level in ('beginner','novice','intermediate','advanced'));
