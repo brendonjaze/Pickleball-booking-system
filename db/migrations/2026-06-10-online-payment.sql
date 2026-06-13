@@ -2,8 +2,8 @@
 -- Run in the Supabase SQL editor. Safe to re-run (idempotent guards used).
 
 -- ── 0. VERIFY column types before running the rest ───────────────────────────
--- Inspect these and confirm p_session_id type in register_open_play matches
--- open_play_sessions.id (this file assumes bigint; switch to uuid if needed).
+-- CONFIRMED 2026-06-13: open_play_sessions.id is uuid, so register_open_play
+-- below takes p_session_id uuid. To re-verify on another environment:
 --   select table_name, column_name, data_type
 --   from information_schema.columns
 --   where table_name in ('bookings','open_play_queue','open_play_sessions')
@@ -37,9 +37,9 @@ create table if not exists public.booking_failures (
 );
 
 -- ── 4. Atomic open-play registration (capacity-safe under concurrency) ────────
--- p_session_id type MUST match open_play_sessions.id (assumed bigint here).
+-- p_session_id type MUST match open_play_sessions.id (confirmed uuid 2026-06-13).
 create or replace function public.register_open_play(
-    p_session_id  bigint,
+    p_session_id  uuid,
     p_player_name text,
     p_mobile      text,
     p_skill_level text,
