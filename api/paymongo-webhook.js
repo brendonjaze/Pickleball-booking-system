@@ -94,22 +94,26 @@ export default async function handler(req, res) {
             });
             if (!rpc.ok) throw new Error(`Supabase register_open_play failed: ${JSON.stringify(rpc.body)}`);
 
-            // PostgREST returns the function's jsonb result directly; if your project
-            // wraps it in an array, use Array.isArray(rpc.body) ? rpc.body[0] : rpc.body.
+            // PostgREST may return the jsonb result either directly or wrapped in a single-element array.
             const result = Array.isArray(rpc.body) ? rpc.body[0] : rpc.body;
-            if (result && result.ok === false) {
-                console.error('Webhook: openplay could not register —', result.reason, 'session', metadata.session_id);
-                await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
+            if (!result || typeof result.ok !== 'boolean') {
+                throw new Error(`register_open_play returned unexpected shape: ${JSON.stringify(rpc.body)}`);
+            }
+            if (result.ok === false) {
+                const reason = result.reason || 'register_failed';
+                console.error('Webhook: openplay could not register —', reason, 'session', metadata.session_id);
+                const failLog = await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
                     method: 'POST',
                     headers: { 'Prefer': 'return=minimal' },
                     body: JSON.stringify({
                         type: 'openplay',
                         booking_ref: metadata.booking_ref,
-                        reason: result.reason || 'register_failed',
+                        reason: reason,
                         payload: metadata,
                     }),
                 });
-                return res.status(200).json({ received: true, status: `openplay_${result.reason}_refund_needed` });
+                if (!failLog.ok) throw new Error(`booking_failures insert failed (openplay): ${JSON.stringify(failLog.body)}`);
+                return res.status(200).json({ received: true, status: `openplay_${reason}_refund_needed` });
             }
             console.log('Webhook: openplay registered via RPC', JSON.stringify(result));
 
@@ -143,11 +147,10 @@ export default async function handler(req, res) {
                 body: JSON.stringify(rows),
             });
             if (!insert.ok) {
-                const isConflict = insert.status === 409 ||
-                    (insert.body && JSON.stringify(insert.body).includes('23505'));
+                const isConflict = insert.status === 409 || insert.body?.code === '23505';
                 if (isConflict) {
                     console.error('Webhook: court slot conflict — recording booking_failure for ref', metadata.booking_ref);
-                    await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
+                    const failLog = await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
                         method: 'POST',
                         headers: { 'Prefer': 'return=minimal' },
                         body: JSON.stringify({
@@ -157,6 +160,8 @@ export default async function handler(req, res) {
                             payload: metadata,
                         }),
                     });
+                    // If we can't even record the failure, let PayMongo retry (court idempotency gates re-insert)
+                    if (!failLog.ok) throw new Error(`booking_failures insert failed (court): ${JSON.stringify(failLog.body)}`);
                     return res.status(200).json({ received: true, status: 'slot_conflict_refund_needed' });
                 }
                 throw new Error(`Supabase court insert failed: ${JSON.stringify(insert.body)}`);
