@@ -4240,34 +4240,24 @@
             </div>`;
 
             } else if (wizardStep === 3) {
-                // Generate a booking reference once per booking
                 if (!window._bookingRef) window._bookingRef = 'GPC-' + Date.now().toString(36).toUpperCase();
-                const ref = window._bookingRef;
-
-                const dlBtn = (label) => `
-            <button onclick="downloadReceipt()" style="
-                display:inline-flex;align-items:center;gap:0.4rem;
-                background:var(--green-dark);color:#fff;border:none;border-radius:8px;
-                padding:0.6rem 1.1rem;font-size:0.82rem;font-weight:600;
-                cursor:pointer;font-family:'Montserrat',sans-serif;margin-top:0.75rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                ${label}
-            </button>`;
-
                 body.innerHTML = `
                 <div style="text-align:center;padding:1.5rem 1rem;">
-                    <div style="font-size:3rem;margin-bottom:0.75rem;">🚶</div>
-                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Walk-in Payment</div>
+                    <div style="font-size:3rem;margin-bottom:0.75rem;">💳</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--green-dark);margin-bottom:0.5rem;">Pay Online to Confirm</div>
                     <p style="font-size:0.88rem;color:#555;line-height:1.6;margin-bottom:1.25rem;">
-                        Pay at the venue <strong>before your session starts</strong>.<br>Present your name to the staff on arrival.
+                        Your slot is confirmed <strong>only after payment</strong>.<br>Pay securely via GCash, Maya, or QR Ph.
                     </p>
                     <div style="background:#f0faf3;border:2px solid var(--green-dark);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.25rem;">
-                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Total amount to pay at venue</div>
+                        <div style="font-size:0.8rem;color:#555;margin-bottom:0.25rem;">Total amount</div>
                         <div style="font-size:2rem;font-weight:800;color:var(--green-dark);">&#8369;${amount.toLocaleString()}</div>
                     </div>
-                    <div style="background:#fff0f0;border:1.5px solid #e53e3e;border-radius:10px;padding:0.75rem 1rem;font-size:0.83rem;color:#c00;line-height:1.5;">
-                        ⚠️ Please bring the <strong>exact amount</strong>.<br>No payment upon arrival = no entry to the court.
-                    </div>
+                    <button id="paymongo-btn" onclick="payWithPaymongo()" style="
+                        width:100%;background:var(--green-dark);color:#fff;border:none;border-radius:10px;
+                        padding:0.85rem 1.3rem;font-size:0.95rem;font-weight:700;
+                        cursor:pointer;font-family:'Montserrat',sans-serif;">
+                        Proceed to Payment
+                    </button>
                 </div>`;
             }
         }
@@ -4575,9 +4565,9 @@
             prev.disabled = wizardStep === 0;
 
             if (wizardStep === 3) {
-                next.textContent = 'Done';
-                next.disabled = false;
+                next.style.display = 'none';
             } else {
+                next.style.display = '';
                 next.innerHTML = 'Next &#8594;';
                 if (wizardStep === 1) next.disabled = bookingName.length < 2 || bookingPhone.length < 10;
                 else next.disabled = false;
@@ -4733,10 +4723,10 @@
 
         async function wizardNext() {
             if (wizardMode === 'openplay') { await opWizardNext(); return; }
-            if (wizardStep === 3) { await finishBooking(); return; }
+            if (wizardStep === 3) { await payWithPaymongo(); return; }
 
             if (wizardStep === 1) {
-                bookingPayment = 'Walk-in (Pay at venue)';
+                bookingPayment = 'QRPh (GCash/Maya/ShopeePay)';
                 wizardStep = 3;
             } else {
                 wizardStep++;
