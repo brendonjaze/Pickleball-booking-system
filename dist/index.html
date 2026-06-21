@@ -3679,7 +3679,7 @@
             const now = new Date();
             calMonth = now.getMonth();
             calYear = now.getFullYear();
-            selDate = toDateStr(now);
+            selDate = toDateStr(now);   // auto-select today so slots are visible immediately
 
             document.getElementById('b-court-name').textContent = curCourt.name;
             document.getElementById('b-price').textContent = `₱${curCourt.price_per_hour}/hour`;
@@ -3825,6 +3825,7 @@
                     const lock = normalizeLock(payload.new);
                     courtLocks.push(lock);
                     renderSlots();
+                    renderCalendar();   // refresh calendar day colors so a newly-locked date greys out live
                     if (lock.date === selDate && lock.court_id === curCourt.id) flashSlot(lock.time_slot);
                     updateConfirm();
                 })
@@ -3836,6 +3837,7 @@
                     const removed = courtLocks.find(l => l.id === payload.old.id);
                     courtLocks = courtLocks.filter(l => l.id !== payload.old.id);
                     renderSlots();
+                    renderCalendar();   // refresh calendar day colors so an unlocked date becomes selectable live
                     if (removed && removed.date === selDate && removed.court_id === curCourt.id) flashSlot(removed.time_slot);
                     updateConfirm();
                 })
@@ -3849,6 +3851,7 @@
                     if (i !== -1) courtLocks[i] = lock;
                     else courtLocks.push(lock);
                     renderSlots();
+                    renderCalendar();   // refresh calendar day colors so lock changes reflect live
                     if (lock.date === selDate && lock.court_id === curCourt.id) flashSlot(lock.time_slot);
                     updateConfirm();
                 })
@@ -3958,11 +3961,23 @@
             updateConfirm();
         }
 
+        function defaultDateForView() {
+            // today when viewing the current month; otherwise the 1st of the viewed month (never a past date)
+            const now = new Date();
+            const todayStr = toDateStr(now);
+            if (calYear === now.getFullYear() && calMonth === now.getMonth()) return todayStr;
+            const first = toDateStr(new Date(calYear, calMonth, 1));
+            return first > todayStr ? first : todayStr;
+        }
+
         function prevMonth() {
             const { minMonth, minYear } = getBookableRange();
             if (calYear === minYear && calMonth === minMonth) return;
             calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+            selDate = defaultDateForView(); selStart = -1; selEnd = -1;   // keep a date in the newly-viewed month selected so its slots stay visible
             renderCalendar();
+            fetchAndSubscribe();
+            updateConfirm();
             fetchFullyBookedDates();
         }
 
@@ -3970,7 +3985,10 @@
             const { maxMonth, maxYear } = getBookableRange();
             if (calYear === maxYear && calMonth === maxMonth) return;
             calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+            selDate = defaultDateForView(); selStart = -1; selEnd = -1;   // keep a date in the newly-viewed month selected so its slots stay visible
             renderCalendar();
+            fetchAndSubscribe();
+            updateConfirm();
             fetchFullyBookedDates();
         }
 
