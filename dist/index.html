@@ -4744,7 +4744,7 @@
 
         async function payWithPaymongo() {
             const slots = getSelSlotRange();
-            const amount = slots.length * curCourt.price_per_hour;
+            const amount = slotsAmount(slots);
             const bookingRef = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
 
             // Pre-pay re-check: bail out if any chosen slot was just taken.
