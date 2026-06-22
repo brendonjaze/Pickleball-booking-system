@@ -3649,7 +3649,7 @@
                     <div class="court-tags">
                         ${c.tags.map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
-                    <span class="court-price">${PRICING ? `₱${PRICING.daytimeRate}–${PRICING.eveningRate}/hr` : `₱${c.price_per_hour}/hr`}</span>
+                    <span class="court-price">${PRICING ? `₱${rateForHour(new Date().getHours())}/hr` : `₱${c.price_per_hour}/hr`}</span>
                 </div>
                 <button class="book-btn" onclick="openBooking(${c.id})" ${!hasAnyBookableDates() ? 'disabled' : ''}>Book Now</button>
             </div>
@@ -3683,7 +3683,7 @@
 
             document.getElementById('b-court-name').textContent = curCourt.name;
             document.getElementById('b-price').textContent = PRICING
-                ? `₱${PRICING.daytimeRate}–${PRICING.eveningRate}/hour`
+                ? `₱${rateForHour(new Date().getHours())}/hour`
                 : `₱${curCourt.price_per_hour}/hour`;
             document.getElementById('b-court-tags').innerHTML = curCourt.tags.map(t => `<span class="tag">${t}</span>`).join('');
 
