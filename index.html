@@ -3680,7 +3680,9 @@
             selDate = toDateStr(now);   // auto-select today so slots are visible immediately
 
             document.getElementById('b-court-name').textContent = curCourt.name;
-            document.getElementById('b-price').textContent = `₱${curCourt.price_per_hour}/hour`;
+            document.getElementById('b-price').textContent = PRICING
+                ? `₱${PRICING.daytimeRate}–${PRICING.eveningRate}/hour`
+                : `₱${curCourt.price_per_hour}/hour`;
             document.getElementById('b-court-tags').innerHTML = curCourt.tags.map(t => `<span class="tag">${t}</span>`).join('');
 
             const svg = document.getElementById('b-court-svg');
@@ -4099,7 +4101,7 @@
                 return `
             <div class="${cls}" ${click}>
                 <div class="slot-time">${slot}</div>
-                <div class="slot-price">₱${curCourt.price_per_hour}</div>
+                <div class="slot-price">₱${rateForSlotIndex(idx)}</div>
                 ${statusLbl}
                 ${statusIcon}
             </div>`;
@@ -4137,7 +4139,7 @@
             const n = selStart === -1 ? 0 : selEnd - selStart + 1;
 
             if (n > 0 && selDate) {
-                const amount = n * curCourt.price_per_hour;
+                const amount = rangeAmount(selStart, selEnd);
                 const slots = getSelSlotRange();
                 const timeStr = slotRangeLabel(slots);
                 const dateStr = shortDate(selDate);
@@ -4239,7 +4241,7 @@
             const body = document.getElementById('modal-body');
             const slots = getSelSlotRange();
             const n = slots.length;
-            const amount = n * curCourt.price_per_hour;
+            const amount = slotsAmount(slots);
             const timeStr = slotRangeLabel(slots);
             const dateStr = formatDate(selDate);
 
@@ -4333,7 +4335,7 @@
         function downloadReceipt() {
             const slots = getSelSlotRange();
             const n = slots.length;
-            const amount = n * curCourt.price_per_hour;
+            const amount = slotsAmount(slots);
             const timeStr = slotRangeLabel(slots);
             const dateStr = formatDate(selDate);
             const ref = window._bookingRef || ('GPC-' + Date.now().toString(36).toUpperCase());
