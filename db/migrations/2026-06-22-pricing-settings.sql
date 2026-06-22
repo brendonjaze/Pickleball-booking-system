@@ -26,4 +26,24 @@ create policy "pricing_settings read"
     on public.pricing_settings for select
     to anon, authenticated
     using (true);
--- Admin edits use the service-role key (bypasses RLS), so no write policy is needed here.
+
+-- ── 4. Admin write access ─────────────────────────────────────────────────────
+-- The admin panel writes directly to Supabase as the logged-in admin (the
+-- `authenticated` role via its anon key + a Supabase Auth JWT), exactly like it
+-- writes to `courts`. There is no service-role key in that app, so authenticated
+-- writes must be allowed by RLS or saves silently no-op. The booking app never
+-- authenticates users (anon only), so `authenticated` here effectively means an
+-- admin. Insert is constrained to the single row (id = 1).
+grant insert, update on public.pricing_settings to authenticated;
+
+drop policy if exists "pricing_settings admin update" on public.pricing_settings;
+create policy "pricing_settings admin update"
+    on public.pricing_settings for update
+    to authenticated
+    using (true) with check (true);
+
+drop policy if exists "pricing_settings admin insert" on public.pricing_settings;
+create policy "pricing_settings admin insert"
+    on public.pricing_settings for insert
+    to authenticated
+    with check (id = 1);
