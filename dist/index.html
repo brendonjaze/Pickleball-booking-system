@@ -3393,7 +3393,7 @@
                 console.log('[LOAD] pendingBooking from sessionStorage:', pendingData);
                 if (pendingData) {
                     // Wait for courts to be loaded first
-                    await Promise.all([fetchCourts(), fetchOpenPlay()]);
+                    await Promise.all([fetchCourts(), fetchOpenPlay(), fetchPricing()]);
 
                     try {
                         const data = JSON.parse(pendingData);
@@ -3466,7 +3466,7 @@
                 setTimeout(resolve, 5000); // fallback if event never fires
             });
 
-            await Promise.all([fetchCourts(), fetchOpenPlay()]);
+            await Promise.all([fetchCourts(), fetchOpenPlay(), fetchPricing()]);
             fetchCourtLocks().then(() => fetchTodayAvailability());
 
             // Show app behind the loading screen so we can measure header position
@@ -4001,6 +4001,54 @@
             const arr = [];
             for (let i = selStart; i <= selEnd; i++) arr.push(TIME_SLOTS[i]);
             return arr;
+        }
+
+        // ── Time-based pricing ────────────────────────────────
+        // Loaded once from the single-row pricing_settings table. Null until loaded;
+        // helpers fall back to the court's flat price_per_hour if it never loads.
+        let PRICING = null;   // { daytimeRate, eveningRate, cutoffHour }
+
+        async function fetchPricing() {
+            try {
+                const res = await fetch(
+                    `${SUPABASE_URL}/rest/v1/pricing_settings?select=*&order=id.asc&limit=1`,
+                    { headers: { 'apikey': SUPABASE_ANON_KEY } }
+                );
+                const data = await res.json();
+                if (Array.isArray(data) && data.length) {
+                    const r = data[0];
+                    PRICING = {
+                        daytimeRate: Number(r.daytime_rate),
+                        eveningRate: Number(r.evening_rate),
+                        cutoffHour: Number(r.cutoff_hour),
+                    };
+                    console.log('[fetchPricing] Loaded', PRICING);
+                }
+            } catch (e) {
+                console.error('[fetchPricing] failed — falling back to court price_per_hour', e);
+            }
+        }
+
+        // Rate for a slot given its 24h start hour. Falls back to the court's flat rate.
+        function rateForHour(startHour) {
+            if (!PRICING) return Number(curCourt && curCourt.price_per_hour) || 0;
+            return startHour >= PRICING.cutoffHour ? PRICING.eveningRate : PRICING.daytimeRate;
+        }
+        // TIME_SLOTS[0] is the 9 AM slot, so slot index i starts at hour (9 + i).
+        function rateForSlotIndex(idx) { return rateForHour(9 + idx); }
+        function rateForSlotLabel(label) {
+            const idx = TIME_SLOTS.indexOf(label);
+            return idx === -1 ? (Number(curCourt && curCourt.price_per_hour) || 0) : rateForSlotIndex(idx);
+        }
+        // Total for a contiguous index range (inclusive), e.g. selStart..selEnd.
+        function rangeAmount(start, end) {
+            let total = 0;
+            for (let i = start; i <= end; i++) total += rateForSlotIndex(i);
+            return total;
+        }
+        // Total for an array of slot label strings (e.g. getSelSlotRange()).
+        function slotsAmount(slots) {
+            return slots.reduce((sum, s) => sum + rateForSlotLabel(s), 0);
         }
 
         function isAdjacentToSel(idx) {
