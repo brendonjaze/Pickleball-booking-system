@@ -1,4 +1,4 @@
-const CACHE = 'bmj-court-2026-06-21-v26';
+const CACHE = 'bmj-court-2026-06-22-v1';
 
 const PRECACHE = [
   '/BMJ COURT PICKLEBALL - PRIMARY LOGO.png',
