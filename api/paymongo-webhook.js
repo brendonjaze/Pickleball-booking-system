@@ -36,6 +36,83 @@ async function supabaseRequest(url, supabaseUrl, key, options = {}) {
     return { ok: res.ok, status: res.status, body: text ? JSON.parse(text) : null };
 }
 
+// ── Server-side price re-derivation (anti price-tampering) ──────────────────
+// The browser sends both the charged amount and the slots/session independently,
+// so the server must recompute the expected price and reject mismatches.
+function slotStartHour(label) {
+    const m = String(label).match(/^\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!m) return null;
+    let h = parseInt(m[1], 10) % 12;
+    if (/PM/i.test(m[3])) h += 12;
+    return h;
+}
+
+function rateForHourServer(startHour, pricing, fallbackRate) {
+    if (!pricing) return Number(fallbackRate) || 0;
+    const cutoff = Number.isFinite(Number(pricing.cutoff_hour)) ? Number(pricing.cutoff_hour) : 18;
+    const rate = startHour >= cutoff ? Number(pricing.evening_rate) : Number(pricing.daytime_rate);
+    return Number.isFinite(rate) ? rate : (Number(fallbackRate) || 0);
+}
+
+// Amount actually paid, in centavos, from the paid checkout session.
+function paidCentavosFrom(checkoutAttrs) {
+    const payments = Array.isArray(checkoutAttrs.payments) ? checkoutAttrs.payments : [];
+    for (const p of payments) {
+        const amt = p && p.attributes && p.attributes.amount;
+        if (typeof amt === 'number') return amt;
+    }
+    const items = Array.isArray(checkoutAttrs.line_items) ? checkoutAttrs.line_items : [];
+    if (items.length) return items.reduce((s, li) => s + (Number(li.amount) || 0) * (Number(li.quantity) || 1), 0);
+    return null;
+}
+
+// Returns { ok, reason?, expected?, paid?, skipped? }. Throws on DB-fetch
+// failure so the outer handler returns 500 and PayMongo retries.
+async function validateAmount(metadata, checkoutAttrs, supabaseUrl, supabaseKey) {
+    const paid = paidCentavosFrom(checkoutAttrs);
+    if (paid == null) {
+        console.warn('Webhook: could not read paid amount — skipping price check for ref', metadata.booking_ref);
+        return { ok: true, skipped: true };
+    }
+    let expected;
+    // Per-slot price (pesos), keyed by slot label, so the booking rows can record
+    // the actual amount charged instead of having the admin recompute it later.
+    let slotPriceByLabel = null;
+    if (metadata.type === 'court') {
+        const slots = JSON.parse(metadata.slots_json || '[]');
+        if (!slots.length) return { ok: false, reason: 'no_slots', expected: null, paid };
+        const pricingRes = await supabaseRequest('pricing_settings?select=*&order=id.asc&limit=1', supabaseUrl, supabaseKey);
+        if (!pricingRes.ok) throw new Error('pricing_settings fetch failed: ' + JSON.stringify(pricingRes.body));
+        const pricing = (Array.isArray(pricingRes.body) && pricingRes.body[0]) || null;
+        let fallback = 0;
+        if (!pricing) {
+            const courtRes = await supabaseRequest(`courts?id=eq.${encodeURIComponent(metadata.court_id)}&select=price_per_hour`, supabaseUrl, supabaseKey);
+            if (!courtRes.ok) throw new Error('courts fetch failed: ' + JSON.stringify(courtRes.body));
+            fallback = (Array.isArray(courtRes.body) && courtRes.body[0] && courtRes.body[0].price_per_hour) || 0;
+        }
+        expected = 0;
+        slotPriceByLabel = {};
+        for (const slot of slots) {
+            const h = slotStartHour(slot);
+            if (h == null) { expected = NaN; slotPriceByLabel = null; break; }
+            const slotPesos = rateForHourServer(h, pricing, fallback);
+            slotPriceByLabel[slot] = slotPesos;
+            expected += slotPesos * 100;
+        }
+    } else if (metadata.type === 'openplay') {
+        const sessRes = await supabaseRequest(`open_play_sessions?id=eq.${encodeURIComponent(metadata.session_id)}&select=price_per_player`, supabaseUrl, supabaseKey);
+        if (!sessRes.ok) throw new Error('open_play_sessions fetch failed: ' + JSON.stringify(sessRes.body));
+        const sess = (Array.isArray(sessRes.body) && sessRes.body[0]) || null;
+        if (!sess) return { ok: false, reason: 'session_not_found', expected: null, paid };
+        expected = (Number(sess.price_per_player) || 0) * 100;
+    } else {
+        return { ok: true, skipped: true };
+    }
+    if (!Number.isFinite(expected)) return { ok: false, reason: 'amount_unverifiable', expected, paid };
+    if (Math.abs(paid - expected) > 1) return { ok: false, reason: 'amount_mismatch', expected, paid };
+    return { ok: true, expected, paid, slotPriceByLabel };
+}
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -81,6 +158,26 @@ export default async function handler(req, res) {
     }
 
     try {
+        // Price-tampering guard: re-derive the expected price server-side and
+        // reject anything that doesn't match what was actually paid. A wrong
+        // amount means a manual refund, not a confirmed booking/registration.
+        const amountCheck = await validateAmount(metadata, checkoutAttrs, supabaseUrl, supabaseKey);
+        if (!amountCheck.ok) {
+            console.error('Webhook: amount validation failed —', amountCheck.reason, 'paid', amountCheck.paid, 'expected', amountCheck.expected, 'ref', metadata.booking_ref);
+            const failLog = await supabaseRequest('booking_failures', supabaseUrl, supabaseKey, {
+                method: 'POST',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({
+                    type: metadata.type || 'unknown',
+                    booking_ref: metadata.booking_ref,
+                    reason: amountCheck.reason,
+                    payload: metadata,
+                }),
+            });
+            if (!failLog.ok) console.error('Webhook: booking_failures insert failed (amount):', JSON.stringify(failLog.body));
+            return res.status(200).json({ received: true, status: `${amountCheck.reason}_refund_needed` });
+        }
+
         if (metadata.type === 'openplay') {
             const rpc = await supabaseRequest('rpc/register_open_play', supabaseUrl, supabaseKey, {
                 method: 'POST',
@@ -131,6 +228,11 @@ export default async function handler(req, res) {
                 return res.status(200).json({ received: true, status: 'already_booked' });
             }
 
+            // Record the actual amount charged per slot (pesos) so revenue never
+            // has to be re-derived from later-changed pricing settings. Null when
+            // the price check was skipped (paid amount unreadable) — admin then
+            // falls back to recomputing for that row.
+            const priceByLabel = amountCheck.slotPriceByLabel || {};
             const rows = slots.map(slot => ({
                 court_id: metadata.court_id,
                 date: metadata.date,
@@ -139,6 +241,7 @@ export default async function handler(req, res) {
                 phone: metadata.mobile,
                 payment_method: metadata.payment_method || 'QRPh (GCash/Maya/ShopeePay)',
                 booking_ref: metadata.booking_ref,
+                price: Object.prototype.hasOwnProperty.call(priceByLabel, slot) ? priceByLabel[slot] : null,
             }));
 
             const insert = await supabaseRequest('bookings', supabaseUrl, supabaseKey, {

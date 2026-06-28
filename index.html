@@ -3128,6 +3128,25 @@
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // ── Polyfill: CanvasRenderingContext2D.roundRect for older iOS/Android ──
+        // (Safari <16.4, Chrome <99). Without this, receipt generation throws and
+        // a paying customer gets no receipt.
+        if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (typeof r === 'undefined') r = 0;
+                if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+                else if (Array.isArray(r)) r = { tl: r[0] || 0, tr: (r[1] != null ? r[1] : r[0]) || 0, br: (r[2] != null ? r[2] : r[0]) || 0, bl: (r[3] != null ? r[3] : r[0]) || 0 };
+                else r = { tl: r.tl || 0, tr: r.tr || 0, br: r.br || 0, bl: r.bl || 0 };
+                this.moveTo(x + r.tl, y);
+                this.arcTo(x + w, y, x + w, y + h, r.tr);
+                this.arcTo(x + w, y + h, x, y + h, r.br);
+                this.arcTo(x, y + h, x, y, r.bl);
+                this.arcTo(x, y, x + w, y, r.tl);
+                this.closePath();
+                return this;
+            };
+        }
+
 
         async function compressImage(file, maxPx = 1500, quality = 0.82) {
             return new Promise((resolve, reject) => {
@@ -3186,11 +3205,18 @@
         let COURTS = [];
 
         async function fetchCourts() {
-            const res = await fetch(
-                `${SUPABASE_URL}/rest/v1/courts?select=*&is_active=eq.true&order=sort_order.asc`,
-                { headers: { 'apikey': SUPABASE_ANON_KEY } }
-            );
-            const data = await res.json();
+            let data;
+            try {
+                const res = await fetch(
+                    `${SUPABASE_URL}/rest/v1/courts?select=*&is_active=eq.true&order=sort_order.asc`,
+                    { headers: { 'apikey': SUPABASE_ANON_KEY } }
+                );
+                if (!res.ok) { console.error('[fetchCourts] HTTP', res.status); COURTS = []; return; }
+                data = await res.json();
+            } catch (e) {
+                console.error('[fetchCourts] fetch failed', e); COURTS = []; return;
+            }
+            if (!Array.isArray(data)) { console.error('[fetchCourts] unexpected response', data); COURTS = []; return; }
             COURTS = data.map((row, i) => {
                 const colors = COURT_PALETTE[i % COURT_PALETTE.length];
                 return {
@@ -3241,7 +3267,12 @@
         // ── Unregister stale service workers from other projects ──
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(r => r.unregister());
+                regs.forEach(r => {
+                    // Only unregister stale SWs from OTHER projects — keep our own
+                    // /sw.js so the PWA/offline cache isn't torn down on every load.
+                    const sw = r.active || r.waiting || r.installing;
+                    if (!sw || !sw.scriptURL.endsWith('/sw.js')) r.unregister();
+                });
             });
         }
 
@@ -3264,7 +3295,7 @@
         async function fetchAnnouncement() {
             try {
                 const res = await fetch(
-                    `${SUPABASE_URL}/rest/v1/announcements?select=*&is_visible=eq.true&limit=1`,
+                    `${SUPABASE_URL}/rest/v1/announcements?select=*&is_visible=eq.true&order=created_at.desc&limit=1`,
                     { headers: { 'apikey': SUPABASE_ANON_KEY } }
                 );
                 const data = await res.json();
@@ -3287,7 +3318,7 @@
 
         async function fetchCourtLocks() {
             try {
-                const today = new Date().toISOString().slice(0, 10);
+                const today = toDateStr(new Date());
                 const { maxMonth, maxYear } = getBookableRange();
                 const lastDay = new Date(maxYear, maxMonth + 1, 0).getDate();
                 const endDate = `${maxYear}-${String(maxMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -3315,7 +3346,7 @@
         }
 
         async function fetchTodayAvailability() {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = toDateStr(new Date());
             try {
                 const { data, error } = await db
                     .from('bookings')
@@ -3432,10 +3463,16 @@
                             opPayment = data.paymentMethod;
                             opSkillLevel = data.skillLevel;
                             // Restore the specific session that was being registered
-                            const restoredSession = Object.values(openPlaySessions).find(s => s && s.id === data.sessionId);
+                            // Search the full session list first (the type-keyed map
+                            // only holds the first session of each type, so a 2nd
+                            // same-type session would restore wrong/blank).
+                            const restoredSession = openPlaySessionsList.find(s => s && s.id === data.sessionId)
+                                || Object.values(openPlaySessions).find(s => s && s.id === data.sessionId);
                             if (restoredSession) {
                                 openPlaySession = restoredSession;
-                                openPlayRegCount = openPlayRegCounts[restoredSession.session_type] || 0;
+                                openPlayRegCount = restoredSession.regCount != null
+                                    ? restoredSession.regCount
+                                    : (openPlayRegCounts[restoredSession.session_type] || 0);
                             }
                             setTimeout(async () => {
                                 document.getElementById('modal').classList.add('show');
@@ -3729,6 +3766,13 @@
                 closeQR();
                 return;
             }
+            // A booking/registration has completed and its confirmation modal is
+            // showing — Back must simply dismiss it, never re-open the (already
+            // paid) wizard, which could otherwise trigger a second charge.
+            if (window._bookingComplete && document.getElementById('modal').classList.contains('show')) {
+                closeModal();
+                return;
+            }
             if (e.state?.page === 'openplay-wizard') {
                 opWizardStep = e.state.step;
                 opRenderWizard();
@@ -3742,6 +3786,19 @@
             }
             if (document.getElementById('modal').classList.contains('show') && wizardMode === 'openplay') {
                 closeModal();
+                return;
+            }
+            // Court-booking wizard modal open: mirror the wizard's Back button
+            // (step 3 -> 1, else step down) and close the modal when backing out
+            // of the first step — never desync to the skipped step 2 or strand
+            // the modal over the main page.
+            if (document.getElementById('modal').classList.contains('show') && wizardMode === 'booking') {
+                if (wizardStep > 0) {
+                    wizardStep = wizardStep === 3 ? 1 : wizardStep - 1;
+                    renderWizard();
+                } else {
+                    closeModal();
+                }
                 return;
             }
             if (document.getElementById('booking-page').style.display === 'block') {
@@ -4020,7 +4077,10 @@
                     PRICING = {
                         daytimeRate: Number(r.daytime_rate),
                         eveningRate: Number(r.evening_rate),
-                        cutoffHour: Number(r.cutoff_hour),
+                        // Fixed business rule: switch to evening pricing at 18:00.
+                        // Default to 18 if the column is missing/blank so evening
+                        // slots are never silently charged the daytime rate.
+                        cutoffHour: Number.isFinite(Number(r.cutoff_hour)) ? Number(r.cutoff_hour) : 18,
                     };
                     console.log('[fetchPricing] Loaded', PRICING);
                 }
@@ -4032,7 +4092,8 @@
         // Rate for a slot given its 24h start hour. Falls back to the court's flat rate.
         function rateForHour(startHour) {
             if (!PRICING) return Number(curCourt && curCourt.price_per_hour) || 0;
-            return startHour >= PRICING.cutoffHour ? PRICING.eveningRate : PRICING.daytimeRate;
+            const rate = startHour >= PRICING.cutoffHour ? PRICING.eveningRate : PRICING.daytimeRate;
+            return Number.isFinite(rate) ? rate : (Number(curCourt && curCourt.price_per_hour) || 0);
         }
         // TIME_SLOTS[0] is the 9 AM slot, so slot index i starts at hour (9 + i).
         function rateForSlotIndex(idx) { return rateForHour(9 + idx); }
@@ -4051,6 +4112,14 @@
             return slots.reduce((sum, s) => sum + rateForSlotLabel(s), 0);
         }
 
+        // A slot is "past" once its start hour has arrived, but only when the
+        // selected date is today. TIME_SLOTS[0] starts at 9 AM, so slot idx
+        // starts at hour (9 + idx).
+        function isSlotPast(idx) {
+            if (selDate !== toDateStr(new Date())) return false;
+            return new Date().getHours() >= 9 + idx;
+        }
+
         function isAdjacentToSel(idx) {
             if (selStart === -1) return true;          // nothing selected yet
             return idx === selStart - 1 || idx === selEnd + 1;
@@ -4066,13 +4135,14 @@
 
             // Check if the range has a booked or locked slot inside it — clear if so
             for (let i = selStart; i <= selEnd; i++) {
-                if (i >= 0 && (bookedSlots.has(TIME_SLOTS[i]) || isSlotLocked(TIME_SLOTS[i]))) { selStart = -1; selEnd = -1; break; }
+                if (i >= 0 && (bookedSlots.has(TIME_SLOTS[i]) || isSlotLocked(TIME_SLOTS[i]) || isSlotPast(i))) { selStart = -1; selEnd = -1; break; }
             }
 
             grid.innerHTML = TIME_SLOTS.map((slot, idx) => {
                 const booked = bookedSlots.has(slot);
                 const locked = isSlotLocked(slot);
-                const unavailable = booked || locked;
+                const past = isSlotPast(idx);
+                const unavailable = booked || locked || past;
                 const inSel = selStart !== -1 && idx >= selStart && idx <= selEnd;
 
                 // Dim non-adjacent slots when a selection exists
@@ -4080,7 +4150,7 @@
 
                 let cls = 'slot';
                 if (booked) cls += ' slot-booked';
-                if (locked && !booked) cls += ' slot-locked';
+                if ((locked || past) && !booked) cls += ' slot-locked';   // greyed + not-allowed for locked AND past slots
                 if (inSel) cls += ' slot-sel';
                 if (blocked) cls += ' slot-dim';
 
@@ -4095,8 +4165,10 @@
                 const statusLbl = booked
                     ? `<div class="slot-booked-lbl">Booked</div>`
                     : locked
-                        ? `<div class="slot-locked-lbl" title="${getSlotLockReason(slot)}">Locked</div>`
-                        : '';
+                        ? `<div class="slot-locked-lbl" title="${escHtml(getSlotLockReason(slot))}">Locked</div>`
+                        : past
+                            ? `<div class="slot-locked-lbl">Closed</div>`
+                            : '';
 
                 return `
             <div class="${cls}" ${click}>
@@ -4109,7 +4181,7 @@
         }
 
         function toggleSlot(idx) {
-            if (bookedSlots.has(TIME_SLOTS[idx]) || isSlotLocked(TIME_SLOTS[idx])) return;
+            if (bookedSlots.has(TIME_SLOTS[idx]) || isSlotLocked(TIME_SLOTS[idx]) || isSlotPast(idx)) return;
 
             if (selStart === -1) {
                 // Start fresh selection
@@ -4198,6 +4270,7 @@
         function confirmBooking() {
             if (selStart === -1 || !selDate) return;
             if (openPlayDates.has(selDate)) return;
+            window._bookingComplete = false;
             wizardStep = 0;
             bookingName = '';
             bookingPhone = '';
@@ -4209,7 +4282,10 @@
         function closeModal() {
             document.getElementById('modal').classList.remove('show');
             window._bookingRef = null;
+            window._opBookingRef = null;
+            window._bookingComplete = false;
             wizardMode = 'booking';
+            wizardStep = 0;
             const titleEl = document.getElementById('modal-header-title');
             if (titleEl) titleEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Complete Your Booking`;
         }
@@ -4271,7 +4347,7 @@
             <div class="phone-field">
                 <label>Name</label>
                 <input type="text" id="name-input" placeholder="e.g. Juan Dela Cruz"
-                       value="${bookingName}"
+                       value="${escHtml(bookingName)}"
                        oninput="bookingName = this.value.trim(); renderWizardFooter()"/>
                 <div class="hint">Enter your full name.</div>
             </div>
@@ -4640,6 +4716,9 @@
         }
 
         async function confirmPaidBooking(type, data) {
+            // From here on the payment is done and the modal is a terminal
+            // confirmation flow — Back should dismiss it, not re-open the wizard.
+            window._bookingComplete = true;
             const body = document.getElementById('modal-body');
             const prev = document.getElementById('btn-prev');
             const next = document.getElementById('btn-next');
@@ -4833,7 +4912,10 @@
             }
         }
         async function payWithPaymongoOp() {
-            const s = (opSelectedSessionType && openPlaySessions[opSelectedSessionType]) || openPlaySession;
+            // Prefer the concretely-selected session. The type-keyed map only holds
+            // the FIRST session of each type, so using it would charge/register the
+            // wrong session when two sessions share a session_type.
+            const s = openPlaySession || (opSelectedSessionType && openPlaySessions[opSelectedSessionType]);
             if (!s) return;
             const amount = s.price_per_player;
             const bookingRef = window._opBookingRef || ('OPR-' + Date.now().toString(36).toUpperCase());
@@ -5023,7 +5105,10 @@
                 phone: bookingPhone,
                 payment_method: bookingPayment,
                 booking_ref: bookingRef,
-                receipt_url: receiptUrl
+                receipt_url: receiptUrl,
+                // Record the amount charged for this slot (pesos) so the admin
+                // revenue tab sums what was actually paid, not a later-changed rate.
+                price: rateForSlotLabel(slot)
             }));
             console.log('[finishBooking] Inserting rows:', JSON.stringify(rows));
 
@@ -5159,7 +5244,7 @@
         function renderModeOpenPlayCards() {
             const container = document.getElementById('mode-open-play-cards');
             if (!container) return;
-            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0).slice(0, 2);
+            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0);
             if (available.length === 0) {
                 container.innerHTML = '';
                 return;
@@ -5249,7 +5334,7 @@
         }
 
         function renderAllSessionsList() {
-            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0).slice(0, 2);
+            const available = openPlaySessionsList.filter(s => s.max_players - s.regCount > 0);
             document.getElementById('op-session-card').innerHTML = `
                 <div class="sp-header">
                     <div class="sp-eyebrow">Open Play</div>
@@ -5413,6 +5498,7 @@
         ];
 
         function openOpWizard() {
+            window._bookingComplete = false;
             opWizardStep = 0;
             opName = '';
             opPhone = '';
@@ -5475,7 +5561,7 @@
             <div class="phone-field">
                 <label>Name</label>
                 <input type="text" id="op-name-input" placeholder="e.g. Juan Dela Cruz"
-                       value="${opName}"
+                       value="${escHtml(opName)}"
                        oninput="opName = this.value.trim(); opRenderFooter()"/>
                 <div class="hint">Enter your full name.</div>
             </div>

@@ -37,7 +37,7 @@ Vercel serves `dist/` as the output directory (`vercel.json`). The `dist/` folde
 
 1. **Dual-file edits**: All changes to `index.html` must also be made to `dist/index.html`.
 2. **SW cache bump**: Increment the version suffix in `CACHE = 'bmj-court-YYYY-MM-DD-vN'` in both `sw.js` and `dist/sw.js` on every deploy.
-3. **`open_play_queue.skill_level`**: DB column has a `CHECK` constraint allowing only `'beginner'`, `'intermediate'`, `'advanced'`. Always send one of these values; the UI selection is currently commented out and defaults to `'beginner'`.
+3. **`open_play_queue.skill_level`**: The Open Play wizard shows an **active** category selector offering `'beginner'` and `'novice'` (`index.html` ~line 5493). The chosen value flows through PayMongo metadata and is written server-side by the `register_open_play` RPC (`api/paymongo-webhook.js`) — `finishOpRegistration()` is legacy/unused. The column has a `CHECK` constraint; **keep the UI's category values in sync with whatever that constraint allows** — a value the constraint rejects makes a *paid* registration fail and require a manual refund. Verified by live test: `'novice'` is currently accepted.
 4. **Static assets in `dist/`**: Images referenced by `index.html` (QR codes, logo, etc.) must be present in `dist/` — they are not automatically copied by Vite.
 
 ## Key Functions in `index.html`
