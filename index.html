@@ -5489,6 +5489,30 @@
         </div>`;
         }
 
+        // ── Open Play: device identity + receipt upload ───────────────────────
+        function opPlayerToken() {
+            let t = localStorage.getItem('op_player_token');
+            if (!t) { t = crypto.randomUUID(); localStorage.setItem('op_player_token', t); }
+            return t;
+        }
+        function opGetSavedRequest(sessionId) {
+            try { return JSON.parse(localStorage.getItem('op_req_' + sessionId) || 'null'); }
+            catch { return null; }
+        }
+        function opSaveRequest(sessionId, requestId) {
+            localStorage.setItem('op_req_' + sessionId, JSON.stringify({ requestId, token: opPlayerToken() }));
+        }
+        // Upload a receipt image to Supabase Storage; returns its public URL.
+        async function opUploadReceipt(file) {
+            const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+            const path = `${opPlayerToken()}/${Date.now()}.${ext}`;
+            const { error } = await db.storage.from('openplay-receipts').upload(path, file, {
+                cacheControl: '3600', upsert: false, contentType: file.type || 'image/jpeg'
+            });
+            if (error) throw error;
+            return db.storage.from('openplay-receipts').getPublicUrl(path).data.publicUrl;
+        }
+
         // ── Open Play Wizard ──────────────────────────────────
         const OP_WIZARD_STEPS = [
             { label: 'Review', icon: '&#128203;' },
