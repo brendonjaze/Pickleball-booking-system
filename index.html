@@ -3762,6 +3762,7 @@
         }
 
         window.addEventListener('popstate', (e) => {
+            if (opChatChan) opUnsubscribeChat();
             if (document.getElementById('qr-lightbox').classList.contains('open')) {
                 closeQR();
                 return;
@@ -5599,21 +5600,12 @@
             if (btn) { btn.disabled = true; btn.textContent = 'Sending request…'; }
             try {
                 const token = opPlayerToken();
-                const { data, error } = await db.from('open_play_join_requests')
-                    .insert({ session_id: s.id, player_name: opName, mobile: opPhone,
-                              skill_level: opSkillLevel || 'beginner', player_token: token, status: 'pending' })
-                    .select('id').single();
-                if (error) {
-                    if (error.code === '23505') {
-                        const { data: existing } = await db.rpc('get_open_play_request', { p_token: token, p_session_id: s.id });
-                        if (existing?.id) opSaveRequest(s.id, existing.id);
-                        showToast('You already requested to join — opening chat.');
-                        opOpenChat(s);
-                        return;
-                    }
-                    throw error;
-                }
-                opSaveRequest(s.id, data.id);
+                const { data, error } = await db.rpc('request_open_play_join', {
+                    p_session_id: s.id, p_player_name: opName, p_mobile: opPhone,
+                    p_skill_level: opSkillLevel || 'beginner', p_token: token
+                });
+                if (error) throw error;
+                if (data?.id) opSaveRequest(s.id, data.id);
                 opOpenChat(s);
             } catch (e) {
                 console.error('[opSubmitRequest]', e);
@@ -5643,6 +5635,9 @@
         function opRenderChat() {
             const body = document.getElementById('modal-body');
             const myToken = opPlayerToken();
+            const prevInput = document.getElementById('op-chat-input');
+            const draft = prevInput ? prevInput.value : '';
+            const hadFocus = !!prevInput && document.activeElement === prevInput;
             const rows = opChatMessages.map(m => {
                 const mine = m.sender_token === myToken && !m.is_organizer;
                 const who = m.is_organizer ? 'Organizer' : (m.sender_name || 'Player');
@@ -5666,12 +5661,19 @@
                            onkeydown="if(event.key==='Enter'){opSendMessage();}"/>
                     <button onclick="opSendMessage()" style="background:var(--green-dark);color:#fff;border:none;border-radius:10px;padding:0.55rem 0.9rem;font-weight:700;cursor:pointer;">Send</button>
                 </div>`;
+            const newInput = document.getElementById('op-chat-input');
+            if (newInput) {
+                newInput.value = draft;
+                if (hadFocus) { newInput.focus(); try { newInput.setSelectionRange(draft.length, draft.length); } catch (e) {} }
+            }
             const sc = document.getElementById('op-chat-scroll'); if (sc) sc.scrollTop = sc.scrollHeight;
         }
         async function opLoadMessages() {
             const { data } = await db.from('open_play_messages')
                 .select('*').eq('session_id', opChatSession.id).order('created_at', { ascending: true });
-            opChatMessages = data || [];
+            const byId = new Map(opChatMessages.map(m => [m.id, m]));
+            (data || []).forEach(m => byId.set(m.id, m));
+            opChatMessages = [...byId.values()].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
             opRenderChat();
         }
         async function opRefreshStatus() {
@@ -5712,7 +5714,7 @@
                 .on('postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'open_play_messages', filter: `session_id=eq.${opChatSession.id}` },
                     payload => {
-                        opChatMessages.push(payload.new);
+                        if (!opChatMessages.some(m => m.id === payload.new.id)) opChatMessages.push(payload.new);
                         opRenderChat();
                         if (opChatStatus !== 'approved') opRefreshStatus();
                     })
