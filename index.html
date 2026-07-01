@@ -4280,6 +4280,7 @@
         }
 
         function closeModal() {
+            opUnsubscribeChat();
             document.getElementById('modal').classList.remove('show');
             window._bookingRef = null;
             window._opBookingRef = null;
@@ -5401,6 +5402,7 @@
             el.innerHTML = `
         <div class="op-form-card" style="text-align:center;padding:1.5rem;">
             <button class="op-submit-btn" onclick="openOpWizard()">Join Open Play</button>
+            ${opGetSavedRequest(openPlaySession?.id) ? `<button class="op-submit-btn" style="margin-top:8px;background:#fff;color:var(--green-dark);border:2px solid var(--green-dark);" onclick="opReopenChat(openPlaySession)">Open chat / status</button>` : ''}
         </div>`;
         }
 
@@ -5701,6 +5703,36 @@
                 console.error('[opChatUpload]', e);
                 if (prev) prev.innerHTML = `<span style="font-size:0.8rem;color:#c62828;">Upload failed — try again.</span>`;
             } finally { inputEl.value = ''; }
+        }
+
+        let opChatChan = null, opStatusPoll = null;
+        function opSubscribeChat() {
+            opUnsubscribeChat();
+            opChatChan = db.channel('op-chat-' + opChatSession.id)
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'open_play_messages', filter: `session_id=eq.${opChatSession.id}` },
+                    payload => {
+                        opChatMessages.push(payload.new);
+                        opRenderChat();
+                        if (opChatStatus !== 'approved') opRefreshStatus();
+                    })
+                .subscribe();
+            opStatusPoll = setInterval(opRefreshStatus, 12000);
+        }
+        function opUnsubscribeChat() {
+            if (opChatChan) { db.removeChannel(opChatChan); opChatChan = null; }
+            if (opStatusPoll) { clearInterval(opStatusPoll); opStatusPoll = null; }
+        }
+        function opReopenChat(session) {
+            if (!session) return;
+            openPlaySession = session;
+            wizardMode = 'openplay';
+            window._bookingComplete = false;
+            const titleEl = document.getElementById('modal-header-title');
+            if (titleEl) titleEl.innerHTML = '&#128172; Open Play Chat';
+            document.getElementById('modal').classList.add('show');
+            history.pushState({ page: 'openplay-chat' }, '');
+            opOpenChat(session);
         }
 
         function downloadOpQR() {
