@@ -1289,6 +1289,12 @@
             font-size: 1.4rem;
         }
 
+        /* ─── Chat typing indicator ─── */
+        @keyframes opTypingBlink {
+            0%, 60%, 100% { opacity: 0.25; }
+            30% { opacity: 1; }
+        }
+
         /* ─── Receipt upload ─── */
         .receipt-label {
             display: block;
@@ -4699,6 +4705,7 @@
             const prev = document.getElementById('btn-prev');
             const next = document.getElementById('btn-next');
 
+            prev.style.display = '';
             prev.disabled = wizardStep === 0;
 
             if (wizardStep === 3) {
@@ -5559,6 +5566,7 @@
         function opRenderFooter() {
             const prev = document.getElementById('btn-prev');
             const next = document.getElementById('btn-next');
+            prev.style.display = '';
             prev.disabled = opWizardStep === 0;
             if (opWizardStep === 2) {
                 next.style.display = 'none';
@@ -5615,11 +5623,22 @@
         }
 
         let opChatSession = null, opChatMessages = [], opChatStatus = 'pending';
+        let opChatReactions = {}, opChatOpenPicker = null;
+        const OP_REACTION_EMOJIS = ['👍', '❤️', '😆', '😮', '😢', '😡'];
         function opOpenChat(session) {
             opChatSession = session;
             opChatMessages = [];
+            opChatReactions = {};
+            opChatOpenPicker = null;
             opChatStatus = 'pending';
             document.getElementById('steps-bar').innerHTML = '';
+            // Chat is not a wizard step — hide the wizard nav buttons (Prev/Next,
+            // shared with the court-booking wizard). Cancel stays so the player can
+            // close; renderWizardFooter/opRenderFooter restore Prev/Next on return.
+            const navPrev = document.getElementById('btn-prev');
+            const navNext = document.getElementById('btn-next');
+            if (navPrev) navPrev.style.display = 'none';
+            if (navNext) navNext.style.display = 'none';
             opRenderChat();
             opLoadMessages();
             opRefreshStatus();
@@ -5643,22 +5662,24 @@
                 const who = m.is_organizer ? 'Organizer' : (m.sender_name || 'Player');
                 const align = mine ? 'flex-end' : 'flex-start';
                 const bg = m.is_organizer ? '#e8f0fe' : (mine ? 'var(--green-light)' : '#f1f1f1');
-                const img = m.image_url ? `<img src="${escHtml(m.image_url)}" style="max-width:180px;border-radius:8px;display:block;margin-top:4px;"/>` : '';
+                const img = m.image_url ? `<img src="${escHtml(m.image_url)}" data-full="${escHtml(m.image_url)}" onclick="opOpenLightbox(this.dataset.full)" style="max-width:180px;border-radius:8px;display:block;margin-top:4px;cursor:zoom-in;"/>` : '';
                 const txt = m.body ? escHtml(m.body) : '';
                 return `<div style="display:flex;flex-direction:column;align-items:${align};margin-bottom:8px;">
                     <div style="font-size:0.68rem;color:#888;margin-bottom:2px;">${escHtml(who)}</div>
                     <div style="max-width:80%;background:${bg};border-radius:10px;padding:6px 10px;font-size:0.85rem;word-break:break-word;">${txt}${img}</div>
+                    ${m.id ? opReactionRowHTML(m.id, myToken) : ''}
                 </div>`;
             }).join('') || `<div style="text-align:center;color:#aaa;font-size:0.82rem;padding:1rem;">No messages yet. Post your receipt to get started.</div>`;
             body.innerHTML = `
                 <div style="margin-bottom:0.6rem;">${opStatusBanner()}</div>
                 <div id="op-chat-scroll" style="height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:#fff;">${rows}</div>
+                <div id="op-chat-typing" style="min-height:16px;font-size:0.72rem;color:#888;padding:1px 4px;"></div>
                 <div id="op-chat-preview" style="margin-top:6px;"></div>
                 <div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
                     <label style="cursor:pointer;font-size:1.3rem;" title="Attach receipt">&#128206;
                         <input type="file" accept="image/*" style="display:none;" onchange="opChatUpload(this)"/></label>
                     <input id="op-chat-input" type="text" placeholder="Message…" style="flex:1;padding:0.55rem 0.7rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;"
-                           onkeydown="if(event.key==='Enter'){opSendMessage();}"/>
+                           onkeydown="if(event.key==='Enter'){opSendMessage();}" oninput="opTypingSignal()"/>
                     <button onclick="opSendMessage()" style="background:var(--green-dark);color:#fff;border:none;border-radius:10px;padding:0.55rem 0.9rem;font-weight:700;cursor:pointer;">Send</button>
                 </div>`;
             const newInput = document.getElementById('op-chat-input');
@@ -5674,6 +5695,7 @@
             const byId = new Map(opChatMessages.map(m => [m.id, m]));
             (data || []).forEach(m => byId.set(m.id, m));
             opChatMessages = [...byId.values()].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            await opLoadReactions();
             opRenderChat();
         }
         async function opRefreshStatus() {
@@ -5707,6 +5729,100 @@
             } finally { inputEl.value = ''; }
         }
 
+        // ── Chat reactions (Messenger-style, one per person per message) ──────
+        function opReactionRowHTML(mid, myToken) {
+            const list = opChatReactions[mid] || [];
+            const counts = {};
+            list.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+            const mine = list.find(r => r.reactor_token === myToken)?.emoji;
+            const chips = Object.entries(counts).map(([emoji, n]) =>
+                `<button onclick="opToggleReaction(${mid},'${emoji}')" style="border:1px solid ${mine === emoji ? 'var(--green-dark)' : 'var(--border)'};background:${mine === emoji ? 'var(--green-light)' : '#fff'};border-radius:999px;padding:1px 8px;font-size:0.75rem;cursor:pointer;line-height:1.4;">${emoji} ${n}</button>`
+            ).join('');
+            const picker = opChatOpenPicker === mid
+                ? `<div style="position:absolute;bottom:calc(100% + 4px);left:0;display:flex;gap:2px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:4px 6px;box-shadow:0 4px 14px rgba(0,0,0,0.18);z-index:5;">${OP_REACTION_EMOJIS.map(e =>
+                    `<button onclick="opToggleReaction(${mid},'${e}')" style="border:none;background:${mine === e ? 'var(--green-light)' : 'none'};font-size:1.15rem;cursor:pointer;border-radius:50%;padding:2px 4px;">${e}</button>`
+                  ).join('')}</div>`
+                : '';
+            return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:2px;position:relative;">${chips}<button onclick="opTogglePicker(${mid})" title="React" style="border:none;background:none;cursor:pointer;font-size:0.8rem;color:#999;padding:1px 4px;border-radius:999px;opacity:0.7;">🙂<span style="font-size:0.7rem;font-weight:700;">+</span></button>${picker}</div>`;
+        }
+        function opTogglePicker(mid) {
+            opChatOpenPicker = opChatOpenPicker === mid ? null : mid;
+            opRenderChat();
+        }
+        async function opToggleReaction(mid, emoji) {
+            opChatOpenPicker = null;
+            const myToken = opPlayerToken();
+            const mine = (opChatReactions[mid] || []).find(r => r.reactor_token === myToken)?.emoji;
+            try {
+                if (mine === emoji) {
+                    await db.from('open_play_message_reactions').delete()
+                        .eq('message_id', mid).eq('reactor_token', myToken);
+                } else {
+                    await db.from('open_play_message_reactions').upsert({
+                        message_id: mid, reactor_token: myToken,
+                        reactor_name: opName || 'Player', is_organizer: false, emoji
+                    }, { onConflict: 'message_id,reactor_token' });
+                }
+            } catch (e) { console.error('[opToggleReaction]', e); }
+            await opLoadReactions();
+            opRenderChat();
+        }
+        async function opLoadReactions() {
+            const ids = opChatMessages.map(m => m.id).filter(Boolean);
+            if (!ids.length) { opChatReactions = {}; return; }
+            try {
+                const { data } = await db.from('open_play_message_reactions')
+                    .select('message_id,reactor_token,emoji').in('message_id', ids);
+                const by = {};
+                (data || []).forEach(r => { (by[r.message_id] = by[r.message_id] || []).push(r); });
+                opChatReactions = by;
+            } catch (e) { console.error('[opLoadReactions]', e); }
+        }
+
+        // ── Typing indicator (shared open_play_typing table) ──────────────────
+        let opTypingLastSent = 0, opTypingHideTimer = null;
+        async function opTypingSignal() {
+            const now = Date.now();
+            if (!opChatSession || now - opTypingLastSent < 2000) return; // throttle
+            opTypingLastSent = now;
+            try {
+                await db.from('open_play_typing').upsert({
+                    session_id: opChatSession.id, actor_token: opPlayerToken(),
+                    actor_name: opName || 'Player', is_organizer: false,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'session_id,actor_token' });
+            } catch (e) { /* best-effort */ }
+        }
+        function opShowOrganizerTyping() {
+            const el = document.getElementById('op-chat-typing');
+            if (!el) return;
+            el.innerHTML = 'Organizer is typing<span class="op-typing-dots">'
+                + '<span style="animation:opTypingBlink 1.2s infinite;font-weight:700;">.</span>'
+                + '<span style="animation:opTypingBlink 1.2s infinite 0.2s;font-weight:700;">.</span>'
+                + '<span style="animation:opTypingBlink 1.2s infinite 0.4s;font-weight:700;">.</span></span>';
+            if (opTypingHideTimer) clearTimeout(opTypingHideTimer);
+            opTypingHideTimer = setTimeout(() => {
+                const e2 = document.getElementById('op-chat-typing');
+                if (e2) e2.textContent = '';
+            }, 4000);
+        }
+
+        // ── Full-screen image viewer for chat/receipt images ─────────────────
+        function opOpenLightbox(url) {
+            const existing = document.getElementById('op-lightbox');
+            if (existing) existing.remove();
+            const box = document.createElement('div');
+            box.id = 'op-lightbox';
+            box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;cursor:zoom-out;';
+            box.innerHTML = `<img src="${escHtml(url)}" style="max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.5);" alt="Receipt"/>
+                <button style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:1.6rem;line-height:1;border-radius:50%;width:40px;height:40px;cursor:pointer;">&times;</button>`;
+            box.addEventListener('click', () => box.remove());
+            document.addEventListener('keydown', function esc(e) {
+                if (e.key === 'Escape') { box.remove(); document.removeEventListener('keydown', esc); }
+            });
+            document.body.appendChild(box);
+        }
+
         let opChatChan = null, opStatusPoll = null;
         function opSubscribeChat() {
             opUnsubscribeChat();
@@ -5717,6 +5833,20 @@
                         if (!opChatMessages.some(m => m.id === payload.new.id)) opChatMessages.push(payload.new);
                         opRenderChat();
                         if (opChatStatus !== 'approved') opRefreshStatus();
+                    })
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'open_play_message_reactions' },
+                    payload => {
+                        // Only re-render if the reaction belongs to a message in this chat.
+                        const mid = payload.new?.message_id ?? payload.old?.message_id;
+                        if (mid && opChatMessages.some(m => m.id === mid)) {
+                            opLoadReactions().then(opRenderChat);
+                        }
+                    })
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'open_play_typing', filter: `session_id=eq.${opChatSession.id}` },
+                    payload => {
+                        if (payload.new?.is_organizer) opShowOrganizerTyping();
                     })
                 .subscribe();
             opStatusPoll = setInterval(opRefreshStatus, 12000);
